@@ -1,5 +1,5 @@
 # MemoryRanger
-![alt text](https://github.com/IgorKorkin/MemoryRanger/blob/master/memory_ranger.png)
+![alt text](https://github.com/IgorKorkin/MemoryRanger/blob/master/memory_ranger_scheme.png)
 
 This hypervisor isolates the memory of protected drivers using separate EPT structures for each of them
 
