@@ -11,6 +11,6 @@ The MemoryRanger hypervisor includes fragments of several projects:
 - [DdiMon ](https://github.com/tandasat/DdiMon) by [Satoshi Tanda](https://twitter.com/standa_t) 
 - [AllMemPro](https://github.com/IgorKorkin/AllMemPro)
 
-Here is MemoryRanger demo:
+Here are two new demos for MemoryRanger: the attack and its prevention by MemoryRanger
 
-[![The MemoryRanger demo](https://img.youtube.com/vi/IMePtijD3TY/0.jpg)](https://www.youtube.com/watch?v=IMePtijD3TY&vq=hd1080)
+[![The MemoryRanger playlist](https://img.youtube.com/vi/FfoIAko6yIA/0.jpg)](https://www.youtube.com/watch?v=JatRpsR4r5o&t=0s&index=2&list=PL0Aerbf3kwULpVhoHyjMUeUFLwnvur5iu)
