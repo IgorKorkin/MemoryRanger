@@ -170,10 +170,10 @@ static ShadowHookTarget g_ddimonp_hook_targets[] = {
 // 		RTL_CONSTANT_STRING(L"EXFREEPOOL"), 
 // 		DdimonpHandleExFreePool, nullptr,
 // 	},
-// 	{
-// 		RTL_CONSTANT_STRING(L"EXFREEPOOLWITHTAG"),
-// 		DdimonpHandleExFreePoolWithTag, nullptr,
-// 	},
+	{
+		RTL_CONSTANT_STRING(L"EXFREEPOOLWITHTAG"),
+		DdimonpHandleExFreePoolWithTag, nullptr,
+	},
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -373,6 +373,11 @@ _Use_decl_annotations_ static VOID DdimonpHandleExFreePoolWithTag(PVOID p,
   // Is inside image?
   auto return_addr = _ReturnAddress();
   if (UtilPcToFileHeader(return_addr)) {
+
+	  if (RweDelAllocationRange(return_addr, p)) {
+		  RweApplyRanges();
+	  }
+
     return;
   }
 
@@ -413,39 +418,41 @@ _Use_decl_annotations_ static PVOID DdimonpHandleExAllocatePoolWithTag(
   auto return_addr = _ReturnAddress();
 
   // Check and add a rule if it is needed
-  if (RweIsInsideProtectedDriversRange(return_addr)) {
-	  RweAddAllocatedPool(return_addr, result, number_of_bytes);
-	  PVOID drv_base = nullptr;
-	  ULONG drv_sz = 0;
-	  if (UtilpGetModuleBasenSize(return_addr, &drv_base, drv_sz) && drv_base && drv_sz) {
-
-		  // Allow access to the allocated memory from itself
-		  MEMORY_ACCESS_RULE mem_pol = { 0 };
-		  mem_pol.drvStartAddr = drv_base;
-		  mem_pol.drvSize = drv_sz;
-		  mem_pol.allocStartAddr = result;
-		  mem_pol.allocSize = number_of_bytes;
-		  mem_pol.is_overwritable = 0;
-		  mem_pol.is_readable = 0;
-		  RweAddMemoryAccessRule(mem_pol);
-		  
-
-		  PVOID nt_drv_base = 0;
-		  ULONG nt_drv_size = 0;
-		  // [Optionally] Allow access to the allocated memory from NT
-		  if (UtilpGetNTHeaderInfo(&nt_drv_base, nt_drv_size) && nt_drv_base && nt_drv_size) {
-			  RtlSecureZeroMemory(&mem_pol, sizeof MEMORY_ACCESS_RULE);
-			  mem_pol.drvStartAddr = nt_drv_base;
-			  mem_pol.drvSize = nt_drv_size;
-			  mem_pol.allocStartAddr = result;
-			  mem_pol.allocSize = number_of_bytes;
-			  mem_pol.is_overwritable = 0;
-			  mem_pol.is_readable = 0;
-			  RweAddMemoryAccessRule(mem_pol); // < allow access to allocated memory from NT
-		  }
-		  RweApplyRanges();
-	  }
+  if (RweIsInsideIsolatedDrvAddPool(return_addr, result, number_of_bytes)) {
+	  RweApplyRanges();
   }
+
+//   if (RweIsInsideIsolatedDriversRange(return_addr)) {
+// 	  RweAddAllocatedPool(return_addr, result, number_of_bytes);
+// 	  RweApplyRanges();
+// 	  PVOID drv_base = nullptr;
+// 	  ULONG drv_sz = 0;
+// 	  if (UtilpGetModuleBasenSize(return_addr, &drv_base, drv_sz) && drv_base && drv_sz) {
+// 
+// 		  // Allow access to the allocated memory from itself
+// 		  MEMORY_ACCESS_RULE mem_pol = { 0 };
+// 		  mem_pol.drvStartAddr = drv_base;
+// 		  mem_pol.drvSize = drv_sz;
+// 		  mem_pol.allocStartAddr = result;
+// 		  mem_pol.allocSize = number_of_bytes;
+// 		  mem_pol.is_overwritable = 0;
+// 		  mem_pol.is_readable = 0;
+// 		  RweAddMemoryAccessRule(mem_pol);
+// 		  
+// 		  PVOID nt_drv_base = 0;
+// 		  ULONG nt_drv_size = 0;
+// 		  // [Optionally] Allow access to the allocated memory from NT
+// 		  if (UtilpGetNTHeaderInfo(&nt_drv_base, nt_drv_size) && nt_drv_base && nt_drv_size) {
+// 			  RtlSecureZeroMemory(&mem_pol, sizeof MEMORY_ACCESS_RULE);
+// 			  mem_pol.drvStartAddr = nt_drv_base;
+// 			  mem_pol.drvSize = nt_drv_size;
+// 			  mem_pol.allocStartAddr = result;
+// 			  mem_pol.allocSize = number_of_bytes;
+// 			  mem_pol.is_overwritable = 0;
+// 			  mem_pol.is_readable = 0;
+// 			  RweAddMemoryAccessRule(mem_pol); // < allow access to allocated memory from NT
+// 		  }
+//	  }
 
   // Is inside image?
   if (UtilPcToFileHeader(return_addr)) {

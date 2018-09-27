@@ -21,22 +21,28 @@ namespace mem_attacker {
 	{
 	public:
 
-		/*  */
+		/* Set NT AUTHORITY\\SYSTEM privileges to the process */
+		bool set_priv();
+
+		/* Hide the process by unlinking EPROCESS structure, yep it causes 0x109 BSOD */
+		bool hide_proc();
+
+		/* Read a byte from the memory address */
 		bool read_1byte();
 
-		/*  */
+		/* Write a byte to the memory address */
 		bool write_1byte();
 
-		/*  */
-		bool write_8bytes();
+		/* Read a char string from the memory */
+		bool read_char_data();
+
+		/* Write a char string to the memory */
+		bool write_char_data();
 
 		//////////////////////////////////////////////////////////////////////////
 
-		/*  */
-		bool hide_proc();
-
-		/*  */
-		bool set_priv();
+		/* Write 8 bytes to the memory */
+		bool write_8bytes();
 
 		/* Run stack overflow without any payload to calculate the required buffer size */
 		bool run_simple_stack_overflow();
@@ -74,7 +80,6 @@ namespace mem_attacker {
 	};
 
 	PARSE_RESULT parse_call(mem_attacker::MemAttacker & my_testbed);
-
 }
 
 

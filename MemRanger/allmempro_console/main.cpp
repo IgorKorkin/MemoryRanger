@@ -44,4 +44,7 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[])
 			} while (true);
 		}
 	}
+	cout << "Press enter to exit." << endl;
+	cin.ignore(); // std::system("PAUSE");
+	return 0;
 }

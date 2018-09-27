@@ -62,6 +62,53 @@ private:
 	std::vector<PROTECTED_DRIVER> protected_drivers;
 };
 
+//////////////////////////////////////////////////////////////////////////
+
+typedef struct _EPROCESS_FIELD {
+	void* start_addr;
+	int	size;
+}EPROCESS_FIELD;
+
+typedef struct _EPROCESS_PID {
+	HANDLE ProcessId;
+	std::vector<_EPROCESS_FIELD> mem_allocated_list;
+}EPROCESS_PID;
+
+using AddOneStructCallback = void (*)(void* address, SIZE_T size);
+
+using DelOneStructCallback = void(*)(void* address, SIZE_T size);
+
+class EprocessStructs {
+	public:
+		void add(const EPROCESS_PID &proc, AddOneStructCallback callback) {
+			protected_eprocess_structs.push_back(proc);
+			for (auto const & item : proc.mem_allocated_list) {
+				callback(item.start_addr, item.size);
+			}
+		}
+
+		bool del(const HANDLE ProcessId, DelOneStructCallback callback) {
+			if (protected_eprocess_structs.size()) {
+				std::vector<EPROCESS_PID>::iterator eproc;
+				for (eproc = protected_eprocess_structs.begin(); eproc != protected_eprocess_structs.end(); ++eproc) {
+					if (ProcessId == eproc->ProcessId) {
+						HYPERPLATFORM_COMMON_DBG_BREAK();
+						HYPERPLATFORM_LOG_INFO_SAFE("The EPROCESS %d (0x%x) is going to be deleted",
+							ProcessId, ProcessId);
+						for (auto const eproc_mem : eproc->mem_allocated_list) {
+							callback(eproc_mem.start_addr, eproc_mem.size);
+						}
+						protected_eprocess_structs.erase(eproc);
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+private:
+	std::vector<EPROCESS_PID> protected_eprocess_structs;
+};
 
 
 

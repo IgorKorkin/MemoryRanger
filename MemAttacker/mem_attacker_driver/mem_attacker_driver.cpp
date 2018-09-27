@@ -300,94 +300,118 @@ _Use_decl_annotations_ static NTSTATUS DriverpDeviceControl(IN PDEVICE_OBJECT pD
 	read_param(pIrp, in_buf, in_buf_sz, out_buf, out_buf_sz);
 	switch (stack->Parameters.DeviceIoControl.IoControlCode)
 	{
-		case MEM_ATTACKER_READ_1_BYTE:
-			if (in_buf_sz == sizeof ADDR_BYTE) {
-				ADDR_BYTE* pdata = (ADDR_BYTE*)in_buf;
-				__try {
-					pdata->value = *(char*)pdata->addr;
-					MEM_ATTACKER_LOGGER("reads 1 byte %01X from memory 0x%I64X.",
-						pdata->value, pdata->addr);
-					DbgPrint("\r\n\r\n");
-				}
-				__except (EXCEPTION_EXECUTE_HANDLER) {   }
+	case MEM_ATTACKER_SET_PRIVS:
+		if (in_buf_sz == sizeof ULONG64) {
+			ULONG64 pid = 0;
+			ULONG64* pdata = (ULONG64*)in_buf;
+			__try {
+				pid = *pdata;
 			}
-			break;
-		case MEM_ATTACKER_WRITE_1_BYTE:
-			if (in_buf_sz == sizeof ADDR_BYTE) {
-				ADDR_BYTE* pdata = (ADDR_BYTE*)in_buf;
-				__try {
-					*(char*)pdata->addr = pdata->value;
-				}
-				__except (EXCEPTION_EXECUTE_HANDLER) {   }
-				MEM_ATTACKER_LOGGER("writes 1 byte %01X to memory 0x%I64X.",
-					pdata->value, pdata->addr);
-				DbgPrint("\r\n\r\n");
+			__except (EXCEPTION_EXECUTE_HANDLER) { pid = 0; }
+			if (pid) {
+				set_privs(pid);
 			}
-			break;
-		case MEM_ATTACKER_WRITE_8_BYTES:
-			if (in_buf_sz == sizeof ADDR_8BYTES) {
-				ADDR_8BYTES* pdata = (ADDR_8BYTES*)in_buf;
-				__try {
-					*(ULONG64*)pdata->addr = pdata->value;
-				}
-				__except (EXCEPTION_EXECUTE_HANDLER) {   }
-				MEM_ATTACKER_LOGGER("writes 8 bytes %08X to memory 0x%I64X.",
-					pdata->value, pdata->addr);
-				DbgPrint("\r\n\r\n");
-			}
-			break;
-		case MEM_ATTACKER_HIDE_PROCESS:
-			if (in_buf_sz == sizeof ULONG64) {
-				ULONG64 pid = 0;
-				ULONG64* pdata = (ULONG64*)in_buf;
-				__try {
-					pid = *pdata;
-				}
-				__except (EXCEPTION_EXECUTE_HANDLER) { pid = 0; }
-				if (pid) {
-					hide_proc(pid);
-				}
-			}
-			break;
+		}
+		break;
 
-		case MEM_ATTACKER_SET_PRIVS:
-			if (in_buf_sz == sizeof ULONG64) {
-				ULONG64 pid = 0;
-				ULONG64* pdata = (ULONG64*)in_buf;
-				__try {
-					pid = *pdata;
-				}
-				__except (EXCEPTION_EXECUTE_HANDLER) { pid = 0; }
-				if (pid) {
-					set_privs(pid);
-				}
+	case MEM_ATTACKER_HIDE_PROCESS:
+		if (in_buf_sz == sizeof ULONG64) {
+			ULONG64 pid = 0;
+			ULONG64* pdata = (ULONG64*)in_buf;
+			__try {
+				pid = *pdata;
 			}
-			break;
-		case MEM_ATTACKER_SIMPLE_STACK_OVERFLOW:
-			status = vulnerable_code::stack_overflow_stub(in_buf, in_buf_sz);
-			info = in_buf_sz;
-			break;
-		case MEM_ATTACKER_SIMPLE_POOL_OVERFLOW:
-			status = vulnerable_code::pool_overflow_stub(in_buf, in_buf_sz);
-			info = in_buf_sz;
-			break;
-		case MEM_ATTACKER_UAF_ALLOCATE_OBJECT:
-			status = vulnerable_code::uaf_allocate_object_stub();
-			info = in_buf_sz;
-			break;
-		case MEM_ATTACKER_UAF_FREE_OBJECT:
-			status = vulnerable_code::uaf_free_object_stub();
-			info = in_buf_sz;
-			break;
-		case MEM_ATTACKER_UAF_USE_OBJECT:
-			status = vulnerable_code::uaf_use_object_stub();
-			info = in_buf_sz;
-			break;
-		case MEM_ATTACKER_UAF_ALLOCATE_FAKE:
-			status = vulnerable_code::uaf_allocate_fake_stub(in_buf);
-			info = in_buf_sz;
-			break;
-		default: {}
+			__except (EXCEPTION_EXECUTE_HANDLER) { pid = 0; }
+			if (pid) {
+				hide_proc(pid);
+			}
+		}
+		break;
+
+	case MEM_ATTACKER_READ_1_BYTE:
+		if (in_buf_sz == sizeof ADDR_BYTE) {
+			ADDR_BYTE* pdata = (ADDR_BYTE*)in_buf;
+			__try {
+				pdata->value = *(char*)pdata->addr;
+				MEM_ATTACKER_LOGGER("reads 1 byte %01X from memory 0x%I64X.",
+					pdata->value, pdata->addr);
+				DbgPrint("\r\n\r\n");
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER) {   }
+		}
+		break;
+
+	case MEM_ATTACKER_WRITE_1_BYTE:
+		if (in_buf_sz == sizeof ADDR_BYTE) {
+			ADDR_BYTE* pdata = (ADDR_BYTE*)in_buf;
+			__try {
+				*(char*)pdata->addr = pdata->value;
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER) {   }
+			MEM_ATTACKER_LOGGER("writes 1 byte %01X to memory 0x%I64X.",
+				pdata->value, pdata->addr);
+			DbgPrint("\r\n\r\n");
+		}
+		break;
+
+	case MEM_ATTACKER_READ_CHAR_DATA:
+		if (in_buf_sz == sizeof ALLOCATED_DATA) {
+			ALLOCATED_DATA *data = (ALLOCATED_DATA*)in_buf;
+			if (data && data->address && data->content) {
+				RtlCopyMemory(data->content, data->address, sizeof data->content);
+				MEM_ATTACKER_LOGGER("reads  \"%s\"  from the memory 0x%I64X.", data->content, data->address);
+			}
+		}
+		break;
+
+	case MEM_ATTACKER_WRITE_CHAR_DATA:
+		if (in_buf_sz == sizeof ALLOCATED_DATA) {
+			ALLOCATED_DATA *data = (ALLOCATED_DATA*)in_buf;
+			if (data && data->address && data->content) {
+				RtlCopyMemory(data->address, data->content, sizeof data->content);
+				MEM_ATTACKER_LOGGER("writes  \"%s\"  to the memory 0x%I64X.", data->content, data->address);
+			}
+		}
+		break;
+
+	//////////////////////////////////////////////////////////////////////////
+	case MEM_ATTACKER_WRITE_8_BYTES:
+		if (in_buf_sz == sizeof ADDR_8BYTES) {
+			ADDR_8BYTES* pdata = (ADDR_8BYTES*)in_buf;
+			__try {
+				*(ULONG64*)pdata->addr = pdata->value;
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER) {   }
+			MEM_ATTACKER_LOGGER("writes 8 bytes %08X to memory 0x%I64X.",
+				pdata->value, pdata->addr);
+			DbgPrint("\r\n\r\n");
+		}
+		break;
+	case MEM_ATTACKER_SIMPLE_STACK_OVERFLOW:
+		status = vulnerable_code::stack_overflow_stub(in_buf, in_buf_sz);
+		info = in_buf_sz;
+		break;
+	case MEM_ATTACKER_SIMPLE_POOL_OVERFLOW:
+		status = vulnerable_code::pool_overflow_stub(in_buf, in_buf_sz);
+		info = in_buf_sz;
+		break;
+	case MEM_ATTACKER_UAF_ALLOCATE_OBJECT:
+		status = vulnerable_code::uaf_allocate_object_stub();
+		info = in_buf_sz;
+		break;
+	case MEM_ATTACKER_UAF_FREE_OBJECT:
+		status = vulnerable_code::uaf_free_object_stub();
+		info = in_buf_sz;
+		break;
+	case MEM_ATTACKER_UAF_USE_OBJECT:
+		status = vulnerable_code::uaf_use_object_stub();
+		info = in_buf_sz;
+		break;
+	case MEM_ATTACKER_UAF_ALLOCATE_FAKE:
+		status = vulnerable_code::uaf_allocate_fake_stub(in_buf);
+		info = in_buf_sz;
+		break;
+	default: {}
 	}
 
 	pIrp->IoStatus.Information = info;

@@ -30,12 +30,16 @@
 
 class AddressRanges {
  public:
+ 
   using ForEachCallback = bool (*)(_In_ void* va, _In_ ULONG64 pa,
                                    _In_opt_ void* context);
 
   AddressRanges();
+
   void add(_In_ void* address, _In_ SIZE_T size);
   
+  bool del(const void* address, const SIZE_T size);
+
   /* check if 'address' belongs to the pages with the protected region */
   bool is_in_range_page_align(void* address) const;
 
@@ -44,6 +48,13 @@ class AddressRanges {
   
   void for_each_page(_In_ ForEachCallback callback, _In_opt_ void* context);
   
+  size_t size() {
+	  return ranges_.size();
+  }
+
+  void clear() {
+	  return ranges_.clear();
+  }
 
  private:
   struct AddressRangeEntry {

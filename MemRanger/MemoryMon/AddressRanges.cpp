@@ -50,6 +50,18 @@ _Use_decl_annotations_ void AddressRanges::add(void* address, SIZE_T size) {
   ranges_.push_back(AddressRangeEntry{address, end_address});
 }
 
+_Use_decl_annotations_ bool AddressRanges::del(const void* address, const SIZE_T size) {
+	const auto end_address =
+		reinterpret_cast<void*>(reinterpret_cast<ULONG_PTR>(address) + size - 1);
+	for (auto item = ranges_.begin(); item != ranges_.end(); ++item) {
+		if ((address == item->start_address) && (end_address == item->end_address)) {
+			ranges_.erase(item);
+			return true;
+		}
+	}
+	return false;
+}
+
 
 _Use_decl_annotations_ bool AddressRanges::is_in_range_page_align(void* address) const {
 	bool inside = false;

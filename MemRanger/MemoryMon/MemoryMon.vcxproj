@@ -121,6 +121,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)capstone_static_winkernel.lib;ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/INTEGRITYCHECK %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -130,9 +131,13 @@
       <WppKernelMode>true</WppKernelMode>
       <AdditionalIncludeDirectories>$(SolutionDir)capstone\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>MEMORYMON_ENABLE_MMIO_TRACE_NOT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Optimization>Disabled</Optimization>
+      <DisableSpecificWarnings>4748;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <AdditionalOptions>/D "DEPRECATE_DDK_FUNCTIONS=1" /D "MSC_NOOPT" %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)capstone_static_winkernel.lib;ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/INTEGRITYCHECK %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -156,7 +161,6 @@
     <ClCompile Include="AddressRanges.cpp" />
     <ClCompile Include="InterruptHandlers.cpp" />
     <ClCompile Include="mem_ranger_rules.cpp" />
-    <ClCompile Include="mem_trace.cpp" />
     <ClCompile Include="page_fault.cpp" />
     <ClCompile Include="PageFaultRecord.cpp" />
     <ClCompile Include="rwe.cpp" />

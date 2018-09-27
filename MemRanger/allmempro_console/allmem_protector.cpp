@@ -93,16 +93,16 @@ namespace allocated_mem_protector {
 	}
 
 	void init_input_commands() {
-		add_unique_command("_rule", &allocated_mem_protector::MemProtector::set_rule, 
-			" <DrvStartAddr> <DrvSz> <AllocStartAddr> <AllocSz>' -- add one rule");
-		
-		add_unique_command("_print", &allocated_mem_protector::MemProtector ::print_rules, 
-			"' -- print the list of memory access rules");
-		
+// 		add_unique_command("_rule", &allocated_mem_protector::MemProtector::set_rule, 
+// 			" <DrvStartAddr> <DrvSz> <AllocStartAddr> <AllocSz>' -- add one rule");
+// 		
+// 		add_unique_command("_print", &allocated_mem_protector::MemProtector ::print_rules, 
+// 			"' -- print the list of memory access rules");
+// 		
 		add_unique_command("_delta", &allocated_mem_protector::MemProtector ::set_delta_to_cheat_tsc, 
-			" <delta in hex>' -- set delta to decrease TSC and reduce overhead");
+			" <delta in hex>' -- set delta to decrease TSC");
 		
-		add_unique_command("q", NULL, "' -- quit");
+		add_unique_command("x", NULL, "' -- exit this app");
 	}
 
 	void print_supported_commands() {

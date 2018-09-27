@@ -18,12 +18,12 @@ typedef struct _ALLOCATED_POOL {
 	void*				poolEnd;
 }ALLOCATED_POOL, *PALLOCATED_POOL;
 
-typedef struct _ISOLATED_MEM_ENCLOSURE {
+typedef struct _ISOLATED_MEM_ENCLAVE {
 	EptData*	ept;
 	void*		driverStart;
 	void*		driverEnd;
 	std::vector<ALLOCATED_POOL> mem_allocated_list;
-}ISOLATED_MEM_ENCLOSURE;
+}ISOLATED_MEM_ENCLAVE;
 
 
 using ConstructCallback = EptCommonEntry *(*)(EptCommonEntry *table, ULONG table_level, ULONG64 physical_address,
@@ -45,8 +45,8 @@ public:
 		}
 	}
 
-	void add_driver(EptData* ept, void* address, SIZE_T size) {
-		ISOLATED_MEM_ENCLOSURE mem_enclosure = { 0 };
+	void add_driver_enclave(EptData* ept, void* address, SIZE_T size) {
+		ISOLATED_MEM_ENCLAVE mem_enclosure = { 0 };
 		const auto end_address =
 			reinterpret_cast<void*>(reinterpret_cast<ULONG_PTR>(address) + size - 1);
 		mem_enclosure.ept = ept;
@@ -55,15 +55,36 @@ public:
 		protected_memory_list.push_back(mem_enclosure);
 	}
 
-	void add_pool(void* driverAddr, void* address, SIZE_T size) {
+	bool add_pool(void* driverAddr, void* address, SIZE_T size) {
 		for (auto & each_driver : protected_memory_list) {
 			if (UtilIsInBounds(driverAddr, each_driver.driverStart, each_driver.driverEnd)) {
 				const auto end_address =
 					reinterpret_cast<void*>(reinterpret_cast<ULONG_PTR>(address) + size - 1);
 				each_driver.mem_allocated_list.push_back(ALLOCATED_POOL{ address, end_address });
-				return;
+				return true;
 			}
 		}
+		return false;
+	}
+
+	SIZE_T del_pool(void* driverAddress, void* allocAddr) {
+		SIZE_T size = 0;
+		for (auto & each_driver : protected_memory_list) {
+			if (UtilIsInBounds(driverAddress, each_driver.driverStart, each_driver.driverEnd)) {
+				for (auto pool = each_driver.mem_allocated_list.begin(); 
+					pool != each_driver.mem_allocated_list.end(); ++pool){
+					if (allocAddr == pool->poolStart){
+						void* end_addr = pool->poolEnd;
+						size =
+							reinterpret_cast<SIZE_T>(reinterpret_cast<void*>((reinterpret_cast<ULONG_PTR>(end_addr) -
+								reinterpret_cast<ULONG_PTR>(allocAddr) + 1)));
+						each_driver.mem_allocated_list.erase(pool);
+						return size;
+					}
+				}
+			}
+		}
+		return size;
 	}
 
 	EptData* get_drivers_ept(void* driverAddr) {
@@ -87,5 +108,5 @@ public:
 		return nullptr;
 	}
 
-	std::vector<ISOLATED_MEM_ENCLOSURE> protected_memory_list;
+	std::vector<ISOLATED_MEM_ENCLAVE> protected_memory_list;
 }; 

@@ -34,6 +34,7 @@ class V2PMap2 {
  public:
   V2PMap2();
   void add(_In_ void* address, _In_ SIZE_T size);
+  bool del(const void* address, const SIZE_T size);
   bool refresh(_In_ ProcessorData* processor_data);
 
  private:

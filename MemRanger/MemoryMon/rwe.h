@@ -50,6 +50,9 @@ using GpRegisters = struct GpRegistersX86;
 void RweConstructTables(_In_ ConstructCallback callback,
 	ULONG table_level, ULONG64 physical_address, bool default_access);
 
+bool is_this_allocation_yours(ISOLATED_MEM_ENCLAVE & driver_enclave, 
+	void * virtual_address);
+
 void RweRefreshTables(ULONG64 physical_address, void* virtual_address);
 
 /*  */
@@ -71,6 +74,9 @@ bool RweShouldWeProtectItbyRules(const _In_ void* src_address, const _In_ void* 
 /*  */
 bool RweShouldWeAddMemoryAccessRule(const _In_ void* src_address);
 
+
+bool RweIsInsideIsolatedDrvAddPool(void* driverAddr, void* poolStart, SIZE_T poolSize);
+
 void RweAddAllocatedPool(void* driverAddr, void* poolStart, SIZE_T poolSize);
 
 _IRQL_requires_max_(PASSIVE_LEVEL) RweData* RweAllocData();
@@ -81,12 +87,19 @@ void RweAddAllocRange(void* address, SIZE_T size);
 
 void RweAddSystemDrvRange(_In_ void* address, _In_ SIZE_T size);
 
-void RweAddProtectedDrvRange(_In_ void* address, _In_ SIZE_T size);
+void RweAddEprocess(const EPROCESS_PID & proc);
+
+bool RweDelEprocess(const HANDLE ProcessId);
+
+void RweAddSystemStructsRange(_In_ void* address, _In_ SIZE_T size);
+
+void RweDelSystemStructsRange(_In_ void* address, _In_ SIZE_T size);
+
+void RweAddIsolatedEnclave(_In_ void* address, _In_ SIZE_T size);
 
 void RweAddSrcRange(_In_ void* address, _In_ SIZE_T size);
 
 void RweAddDstRange(_In_ void* address, _In_ SIZE_T size);
-
 
 /* check if 'address' belongs to the pages with the protected region */
 bool RweIsInsideMemoryAllocationRangePageAlign(void* address);
@@ -94,11 +107,19 @@ bool RweIsInsideMemoryAllocationRangePageAlign(void* address);
 /* Precisely check if 'address' belongs to the protected region */
 bool RweIsInsideMemoryAllocationRange(_In_ void* address);
 
+bool RweDelAllocationRange(void* driverAddress, void* allocAddr);
+
 /* Protected drivers range by MemoryRanger using page align*/
-bool RweIsInsideProtectedDriversRangePageAlign(_In_ void* address);
+bool RweIsInsideIsolatedDriversRangePageAlign(_In_ void* address);
 
 /* Protected drivers range by MemoryRanger */
-bool RweIsInsideProtectedDriversRange(_In_ void* address);
+bool RweIsInsideIsolatedDriversRange(_In_ void* address);
+
+/*  */
+bool RweIsInsideSystemStructsRangePageAlign(_In_ void* address);
+
+/*  */
+bool RweIsInsideSystemStructsRange(_In_ void* address);
 
 bool RweIsInsideSystemDriversRange(_In_ void* address);
 

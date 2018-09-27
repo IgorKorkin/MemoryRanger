@@ -67,10 +67,10 @@ _IRQL_requires_max_(PASSIVE_LEVEL) static void TestpLoadImageNotifyRoutine(
     _In_opt_ PUNICODE_STRING full_image_name, _In_ HANDLE process_id,
     _In_ PIMAGE_INFO image_info);
 
-_IRQL_requires_max_(PASSIVE_LEVEL) static void TestpCreateProcessNotifyRoutine(
-	_In_ HANDLE ParentId, 
+_IRQL_requires_max_(PASSIVE_LEVEL) static void TestpCreateProcessNotifyRoutineEx(
+	_Inout_ PEPROCESS Process,
 	_In_ HANDLE ProcessId,
-	_In_ BOOLEAN Create
+	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo
 	);
 ;
 
@@ -108,6 +108,11 @@ _Use_decl_annotations_ NTSTATUS TestInitialization() {
     return status;
   }
 
+  status = PsSetCreateProcessNotifyRoutineEx(TestpCreateProcessNotifyRoutineEx, FALSE);
+  if (!NT_SUCCESS(status)) {
+	  return status;
+  }
+
   return status;
 }
 
@@ -115,7 +120,7 @@ _Use_decl_annotations_ void TestTermination() {
   PAGED_CODE();
 
   PsRemoveLoadImageNotifyRoutine(TestpLoadImageNotifyRoutine);
-
+  PsSetCreateProcessNotifyRoutineEx(TestpCreateProcessNotifyRoutineEx, TRUE);
 }
 
 // Runs a set of tests for MemoryMonRWE
@@ -130,9 +135,9 @@ _Use_decl_annotations_ void TestRwe() {
   if (!g_rwe_zero_page) {
     return;
   }
-  RtlZeroMemory(g_rwe_zero_page, PAGE_SIZE);
+  RtlSecureZeroMemory(g_rwe_zero_page, PAGE_SIZE);
 
-  if (MemTraceIsEnabled()) {
+  if (false /*MemTraceIsEnabled()*/) {
     TestpForEachDriver(TestpForEachDriverCallback, nullptr);
     RweApplyRanges();
     HYPERPLATFORM_COMMON_DBG_BREAK();
@@ -318,10 +323,58 @@ _Use_decl_annotations_ static bool TestpForEachDriverCallback(
 
   const auto name = reinterpret_cast<const char*>(module.FullPathName) +
                     module.OffsetToFileName;
-  if (MemTraceIsTargetSrcAddress(name)) {
-    RweAddSrcRange(module.ImageBase, module.ImageSize);
-  }
+  name;
+//   if (MemTraceIsTargetSrcAddress(name)) {
+//     RweAddSrcRange(module.ImageBase, module.ImageSize);
+//   }
   return true;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void add_rule(void* drvStartAddr, unsigned __int64 drvSize, void* allocStartAddr, unsigned __int64 allocSize) {
+	MEMORY_ACCESS_RULE mem_pol = { 0 };
+	mem_pol.drvStartAddr = drvStartAddr;
+	mem_pol.drvSize = drvSize;
+	mem_pol.allocStartAddr = allocStartAddr;
+	mem_pol.allocSize = allocSize;
+	mem_pol.is_overwritable = 0;
+	mem_pol.is_readable = 0;
+	RweAddMemoryAccessRule(mem_pol);
+	RweAddAllocRange(mem_pol.allocStartAddr, mem_pol.allocSize);
+}
+
+NTKERNELAPI UCHAR *NTAPI PsGetProcessImageFileName(_In_ PEPROCESS process);
+
+bool is_it_cmd_exe(HANDLE ProcessId, _Outptr_ PEPROCESS & Process) {
+	bool b_res = false;
+	if (NT_SUCCESS(PsLookupProcessByProcessId(ProcessId, &Process))) {
+		PCHAR processName = (PCHAR)PsGetProcessImageFileName(Process);
+		CHAR cmdexe_name[] = "cmd.exe";
+		size_t len = sizeof(cmdexe_name) - 1;
+		b_res = (len == RtlCompareMemory(cmdexe_name, processName, len));
+
+		if (Process) {
+			ObDereferenceObject(Process);
+		}
+	}
+	return b_res;
+}
+
+bool is_it_from_explorer_exe(HANDLE ProcessId) {
+	bool b_res = false;
+	PEPROCESS Process = NULL;
+	if (NT_SUCCESS(PsLookupProcessByProcessId(ProcessId, &Process))) {
+		PCHAR processName = (PCHAR)PsGetProcessImageFileName(Process);
+		CHAR explorerexe_name[] = "explorer.exe";
+		size_t len = sizeof(explorerexe_name) - 1;
+		b_res = (len == RtlCompareMemory(explorerexe_name, processName, len));
+
+		if (Process) {
+			ObDereferenceObject(Process);
+		}
+	}
+	return b_res;
 }
 
 _Use_decl_annotations_ static void TestpLoadImageNotifyRoutine(
@@ -339,7 +392,8 @@ _Use_decl_annotations_ static void TestpLoadImageNotifyRoutine(
 
   static UNICODE_STRING kTargetDriverExpressions[] = {
 	  RTL_CONSTANT_STRING(L"*\\MEMALLOCATOR*.SYS"),
-
+	  RTL_CONSTANT_STRING(L"*\\MEMATTACKER*.SYS"),
+	  
       RTL_CONSTANT_STRING(L"*\\NOIMAGE.SYS"),
       RTL_CONSTANT_STRING(L"*\\UNLINKED.SYS"),
       RTL_CONSTANT_STRING(L"*\\NGS*.SYS"),
@@ -356,11 +410,12 @@ _Use_decl_annotations_ static void TestpLoadImageNotifyRoutine(
 	PVOID protected_drv_base = image_info->ImageBase;
 	SIZE_T protected_drv_size = image_info->ImageSize;
 	
-	HYPERPLATFORM_LOG_INFO("The protected driver is loaded: %I64X-%I64X", 
+	HYPERPLATFORM_LOG_INFO("The isolated driver \"%wZ\" is loaded: %I64X-%I64X", 
+		expression,
 		protected_drv_base, 
 		(char*)protected_drv_base + protected_drv_size);
 
-	RweAddProtectedDrvRange(protected_drv_base, protected_drv_size);
+	RweAddIsolatedEnclave(protected_drv_base, protected_drv_size);
 	
 	static UNICODE_STRING os_drivers[] = {
 		RTL_CONSTANT_STRING(L"*\\NTOSKRNL.EXE"),
@@ -369,7 +424,9 @@ _Use_decl_annotations_ static void TestpLoadImageNotifyRoutine(
 		RTL_CONSTANT_STRING(L"*\\NTKRNLAMP.EXE"),
 
 		RTL_CONSTANT_STRING(L"*\\WDFLDR.SYS"),
-		RTL_CONSTANT_STRING(L"*\\WDF01000.SYS"),  // Wdf01000!LibraryRegisterClient
+		RTL_CONSTANT_STRING(L"*\\WDF01000.SYS"),  //  Wdf01000!LibraryRegisterClient
+		RTL_CONSTANT_STRING(L"*\\BAM.SYS"), // Background Activity Moderator Driver (bam) for EPROCESS
+
 		RTL_CONSTANT_STRING(L"*\\ALLMEMPRO.SYS")
 	};
 
@@ -386,6 +443,53 @@ _Use_decl_annotations_ static void TestpLoadImageNotifyRoutine(
 
     break;
   }
+}
+
+
+void add_new_eprocess(_In_ HANDLE ProcessId, PEPROCESS Process) {
+	EPROCESS_PID new_process = { 0 };
+	new_process.ProcessId = ProcessId;
+
+	auto start_addr = (char*)Process + g_EprocOffsets.Token;
+	auto size = g_EprocOffsets.TokenSize;
+	new_process.mem_allocated_list.push_back(EPROCESS_FIELD{ start_addr, size });
+
+	start_addr = (char*)Process + g_EprocOffsets.ActiveProcessLinks;
+	size = g_EprocOffsets.ActiveProcessLinksSize;
+
+	new_process.mem_allocated_list.push_back(EPROCESS_FIELD{ start_addr, size });
+
+	RweAddEprocess(new_process);
+}
+
+bool del_eprocess_structs(_In_ HANDLE ProcessId) {
+	return RweDelEprocess(ProcessId);
+}
+
+_Use_decl_annotations_ void TestpCreateProcessNotifyRoutineEx(
+	_Inout_ PEPROCESS Process,
+	_In_ HANDLE ProcessId,
+	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo
+) {
+	UNREFERENCED_PARAMETER(Process); // unreferenced
+	UNREFERENCED_PARAMETER(ProcessId); // unreferenced
+
+	//If CreateInfo is non-NULL, a new process is being created
+	if (CreateInfo != NULL ) { 
+		UNICODE_STRING cmdexe = RTL_CONSTANT_STRING(L"*\\CMD.EXE");
+		if (FsRtlIsNameInExpression(&cmdexe, (PUNICODE_STRING)CreateInfo->ImageFileName, TRUE, nullptr) &&
+			is_it_from_explorer_exe(CreateInfo->ParentProcessId)) {
+			HYPERPLATFORM_COMMON_DBG_BREAK();
+			if (NT_SUCCESS(CreateInfo->CreationStatus)) {
+				add_new_eprocess(ProcessId, Process);
+				RweApplyRanges();
+			}
+		}
+	}
+	// If CreateInfo is NULL, the specified process is exiting.
+	else if (del_eprocess_structs(ProcessId)) {
+			RweApplyRanges();
+	}
 }
 
 
