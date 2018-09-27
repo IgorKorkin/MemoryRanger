@@ -133,10 +133,13 @@ extern "C" namespace allocated_memory_access {
 	/*  */
 	extern CONFIG_THREAD configThread;
 
+
+
+
 	class AllocatedMemoryAccess {
 	private:
 		unsigned int secretDataSz;
-		char* secretData;
+		void* _secretData;
 	public:
 
 		NTSTATUS allocate_set_secret();

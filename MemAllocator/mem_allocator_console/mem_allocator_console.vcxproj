@@ -160,6 +160,7 @@
     <ClInclude Include="..\..\utils\drivers_launch_pad.h" />
     <ClInclude Include="..\..\utils\print_messages.h" />
     <ClInclude Include="..\..\utils\scm_util.h" />
+    <ClInclude Include="..\shared\version.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="memory_allocator.h" />
   </ItemGroup>

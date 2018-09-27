@@ -3,15 +3,6 @@
 extern "C" namespace allocated_memory_access 
 {
 	CONFIG_THREAD configThread = { 0 };
-	
-	/* Allocates a page-aligned buffer */
-	PVOID alignedExAllocatePoolWithTag(_In_ const SIZE_T NumberOfBytes) {
-		const ULONG armor_tag = 'ROUF';
-		return 
-			ExAllocatePoolWithTag(NonPagedPool, 
-			(NumberOfBytes / PAGE_SIZE + 1)*PAGE_SIZE, armor_tag);
-	}
-		
 
 	//////////////////////////////////////////////////////////////////////////
 
@@ -29,11 +20,10 @@ extern "C" namespace allocated_memory_access
 
 		secretDataSz = 30;
 		if (sizeof(secret) == secretDataSz) {
-			secretData = 
-				(char*)alignedExAllocatePoolWithTag(secretDataSz);
-			if (secretData) {
-				RtlSecureZeroMemory(secretData, secretDataSz);
-				RtlCopyMemory(secretData, secret, secretDataSz);
+			_secretData = alignedExAllocatePoolWithTag(secretDataSz);
+			if (_secretData) {
+				RtlSecureZeroMemory(_secretData, secretDataSz);
+				RtlCopyMemory(_secretData, secret, secretDataSz);
 				RtlSecureZeroMemory(secret, secretDataSz);
 			}
 		}
@@ -42,17 +32,17 @@ extern "C" namespace allocated_memory_access
 
 	NTSTATUS AllocatedMemoryAccess::get_secret(PVOID inBuf, const ULONG inBufSz) {
 		if (inBufSz == sizeof(SECRET_INFO)) {
-			RtlCopyMemory(((PSECRET_INFO)inBuf)->SecretData, secretData, secretDataSz);
-			((PSECRET_INFO)inBuf)->SecretStart = (ULONG64)secretData;
+			RtlCopyMemory(((PSECRET_INFO)inBuf)->SecretData, _secretData, secretDataSz);
+			((PSECRET_INFO)inBuf)->SecretStart = (ULONG64)_secretData;
 			((PSECRET_INFO)inBuf)->SecretSize = secretDataSz;
 		}
 		return STATUS_SUCCESS;
 	}
 
 	NTSTATUS AllocatedMemoryAccess::free_secret() {
-		if (secretData) {
-			RtlSecureZeroMemory(secretData, secretDataSz);
-			ExFreePool(secretData);
+		if (_secretData) {
+			RtlSecureZeroMemory(_secretData, secretDataSz);
+			alignedExFreePoolWithTag(_secretData);
 		}
 		return STATUS_SUCCESS;
 	}
@@ -160,11 +150,12 @@ extern "C" namespace allocated_memory_access
 			nt_status = ObReferenceObjectByHandle(configThread.handleMemoryLoop,
 				THREAD_ALL_ACCESS, NULL, KernelMode, (PVOID*)&configThread.pthread, NULL);
 			if (NT_SUCCESS(nt_status)) {
-				if (STATUS_SUCCESS == (nt_status = KeWaitForSingleObject(configThread.pthread,
-					Executive, KernelMode, FALSE, NULL))) {
+				nt_status = KeWaitForSingleObject(configThread.pthread,
+					Executive, KernelMode, FALSE, NULL);
+				if (NT_SUCCESS(nt_status)) {
 					ObDereferenceObject(configThread.pthread);
 					if (configThread.pconfig_data) {
-						ExFreePool(configThread.pconfig_data);
+						alignedExFreePoolWithTag(configThread.pconfig_data);
 					}
 				}
 			}
@@ -174,27 +165,26 @@ extern "C" namespace allocated_memory_access
 	
 #include <intrin.h>
 	void AllocatedMemoryAccess::calc_latency_stats(const int num_measures, ULONG64* rawDurations, const ULONG rawDurationsCount) {
-		if (configThread.flagLoopIsActive){
-			ULONG64 start_time = 0;
-			ULONG64 end_time = 0;
-			ULONG64 temp = 0;
-			KeWaitForMutexObject(&configThread.mutex, Executive, KernelMode, FALSE, NULL);
+		const ULONG64 temp_sz = 123;
+		PVOID temp_buf = alignedExAllocatePoolWithTag(123);
+		if (temp_buf){
+			ULONG64 start_time = 0, end_time = 0;
+			char read_param = 0;
 			const unsigned long long CR0_original = __readcr0();
-			/* Disable and write back the cache */
-			unsigned long long CR0_nocache = CR0_original | 0x40000000;
+			unsigned long long CR0_nocache = CR0_original | 0x40000000; /* Disable and write back the cache */
 			__writecr0(CR0_nocache);
 			for (unsigned int i = 0; i < rawDurationsCount; i++) {
 				start_time = __rdtsc();
 				for (int loops = num_measures; loops--;) {
-					temp = 0;
-					__wbinvd();   configThread.pconfig_data->presReactor = loops;
-					__wbinvd();   temp = configThread.pconfig_data->presReactor;
+					read_param = 0;
+					__wbinvd();   *(char *)temp_buf = (char)loops;
+					__wbinvd();   read_param = *(char *)temp_buf;
 				}
 				end_time = __rdtsc();
 				rawDurations[i] = end_time - start_time;
 			}
 			__writecr0(CR0_original);
-			KeReleaseMutex(&configThread.mutex, FALSE);
+			alignedExFreePoolWithTag(temp_buf);
 		}
 	}
 

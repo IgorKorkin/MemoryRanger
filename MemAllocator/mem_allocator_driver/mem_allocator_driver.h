@@ -15,16 +15,38 @@
 
 extern "C" {
 
-
 #define MEM_ALLOCATOR_LOGGER(format, ...) \
   DbgPrint("[%ws] ", MEM_ALLOCATOR_NAME); \
   DbgPrint((format), __VA_ARGS__); \
   DbgPrint("\r\n");
 
+
+#if defined  US_DATA
+	#define THE_TAG '-US-'
+#elif defined UK_DATA
+	#define THE_TAG '-UK-'
+#elif defined RU_DATA
+	#define THE_TAG '-UR-'
+#else
+	#define THE_TAG 'SCRT'
+#endif // DATA_SECRET
+
+	/* Allocates a page-aligned buffer */
+#if !defined(alignedExAllocatePoolWithTag)
+#define alignedExAllocatePoolWithTag(NumberOfBytes)   \
+		ExAllocatePoolWithTag(NonPagedPool, ( (NumberOfBytes) / PAGE_SIZE + 1)*PAGE_SIZE, THE_TAG);
+#endif
+
+#if !defined(alignedExFreePoolWithTag)
+#define alignedExFreePoolWithTag(allocAddr)    \
+ ExFreePoolWithTag( (allocAddr), THE_TAG);
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // macro utilities
 //
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //

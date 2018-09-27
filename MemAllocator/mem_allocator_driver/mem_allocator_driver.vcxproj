@@ -130,6 +130,7 @@
     <ClCompile Include="mem_allocator_driver.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\shared\version.h" />
     <ClInclude Include="code_asm.h" />
     <ClInclude Include="allocated_mem_access.h" />
     <ClInclude Include="common.h" />

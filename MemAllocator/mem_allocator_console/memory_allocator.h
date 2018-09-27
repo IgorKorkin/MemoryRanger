@@ -22,8 +22,11 @@ using namespace std;
 
 namespace memory_allocator{
 
+	
+
 	class MemAllocator : public drivers_launch_pad::DriversLaunchPad
 	{
+
 	public:
 		/* print the loaded address of the driver and its size*/
 		void print_driver_info();
@@ -44,10 +47,142 @@ namespace memory_allocator{
 		bool measure_latency();
 
 		/* Read a one byte from memory */
-		bool read_memory_byte();
+		bool read_one_byte();
 
 		/* Write a byte to memory */
-		bool write_memory_byte();
+		bool write_one_byte();
+
+		bool check_input_string(char *input) {
+			bool b_res = false;
+			size_t len = strlen(input);
+			for (size_t i = 0; i < len; i++) {
+				b_res = isgraph(input[i]) || isspace(input[i]);
+				if (!b_res)   {   break;   }
+			}
+			if (!b_res) {
+				cout << "  The input string:  \"" << input <<"\"  is wrong, try again!" << endl;
+			}
+			return b_res;
+		}
+
+		bool alloc_memory_pool() {
+			bool b_res = false;
+			ALLOCATED_DATA char_data = { 0 };
+			cin.ignore(); // ignore one whitespace between the command and params
+			cin.getline(char_data.content, sizeof(char_data.content));
+			if (check_input_string(char_data.content)) {
+				b_res =
+					scm_manager.send_ctrl_code(MEM_ALLOCATOR_ALLOCATE_MEMORY, (LPVOID)&char_data, sizeof ALLOCATED_DATA, NULL, 0, 0);
+				if (b_res) {
+					allocated_addresses.push_back(char_data.address);
+					cout << "  The data \"" << char_data.content << "\" has been allocated in "
+						<< hex << uppercase << char_data.address << endl;
+				}
+			}			
+			return b_res;
+		}
+
+		bool free_memory_pool() {
+			bool b_res = false;
+			ALLOCATED_DATA data = { 0 };
+			std::cin >> std::hex >> data.address;
+			auto item = find(allocated_addresses.begin(), allocated_addresses.end(), data.address);
+			if (allocated_addresses.end() != item) {
+				b_res =
+					scm_manager.send_ctrl_code(MEM_ALLOCATOR_FREE_MEMORY_POOL, (LPVOID)&data, sizeof ALLOCATED_DATA, NULL, 0, 0);
+				if (b_res) {
+					cout << "  The allocation from "
+						<< hex << uppercase << data.address <<
+						" has been freed, bye memory.." << endl;
+					allocated_addresses.erase(item);
+				}
+			}else {
+				cout << "  The allocation from "
+					<< hex << uppercase << data.address <<
+					" is not found." << endl;
+			}
+			
+			return b_res;
+		}
+
+		/* Read a char string from the memory */
+		bool MemAllocator::read_char_data_non_secure() {
+			ALLOCATED_DATA data = { 0 };
+			std::cin >> std::hex >> data.address;
+			bool b_res =
+				scm_manager.send_ctrl_code(MEM_ALLOCATOR_READ_CHAR_DATA, (LPVOID)&data, sizeof ALLOCATED_DATA, NULL, 0, 0);
+			if (b_res) {
+				cout << "  We've just read  \"" << data.content << "\"  from  "
+					<< hex << uppercase << data.address << endl;
+			}
+			return b_res;
+		}
+
+		bool MemAllocator::read_char_data() {
+			bool b_res = false;
+			ALLOCATED_DATA data = { 0 };
+			std::cin >> std::hex >> data.address;
+			auto item = find(allocated_addresses.begin(), allocated_addresses.end(), data.address);
+			if (allocated_addresses.end() != item) {
+				b_res =
+					scm_manager.send_ctrl_code(MEM_ALLOCATOR_READ_CHAR_DATA, (LPVOID)&data, sizeof ALLOCATED_DATA, NULL, 0, 0);
+				if (b_res) {
+					cout << "  We've just read  \"" << data.content << "\"  from  "
+						<< hex << uppercase << data.address << endl;
+				}
+			}
+			else {
+				cout << "  The allocation from "
+					<< hex << uppercase << data.address <<
+					" is not found." << endl;
+			}
+			return b_res;
+		}
+
+		/* Write a a char string to the memory */
+		bool MemAllocator::write_char_data_non_secure() {
+			bool b_res = false;
+			ALLOCATED_DATA data = { 0 };
+			std::cin >> std::hex >> data.address;
+			cin.ignore(); // ignore one whitespace between the command and params
+			cin.getline(data.content, sizeof(data.content));
+			if (check_input_string(data.content)) {
+				b_res =
+					scm_manager.send_ctrl_code(MEM_ALLOCATOR_WRITE_CHAR_DATA, &data, sizeof ALLOCATED_DATA, NULL, 0, 0);
+				if (b_res) {
+					cout << "  We've just written  \"" << data.content << "\"  to the  "
+						<< hex << uppercase << data.address << endl;
+				}
+			}
+			return b_res;
+		}
+
+		bool MemAllocator::write_char_data() {
+			bool b_res = false;
+			ALLOCATED_DATA data = { 0 };
+			std::cin >> std::hex >> data.address;
+			if (allocated_addresses.end() != find(allocated_addresses.begin(), allocated_addresses.end(), data.address)) {
+				cin.ignore(); // ignore one whitespace between the command and params
+				cin.getline(data.content, sizeof(data.content));
+				if(check_input_string(data.content)) {
+					b_res =
+						scm_manager.send_ctrl_code(MEM_ALLOCATOR_WRITE_CHAR_DATA, &data, sizeof ALLOCATED_DATA, NULL, 0, 0);
+					if (b_res) {
+						cout << "  We've just written  \"" << data.content << "\"  to the  "
+							<< hex << uppercase << data.address << endl;
+					}
+				}
+			}
+			else {
+				cout << "  The allocation from "
+					<< hex << uppercase << data.address <<
+					" is not found." << endl;
+			}
+			return b_res;
+		}
+
+		private:
+			std::vector<void*> allocated_addresses;
 	};
 
 	//////////////////////////////////////////////////////////////////////////

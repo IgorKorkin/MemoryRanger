@@ -8,11 +8,12 @@ namespace memory_allocator {
 		RtlSecureZeroMemory(&driver_info, sizeof DRIVER_INFO);
 		bool b_res = scm_manager.send_ctrl_code(MEM_ALLOCATOR_GET_DRIVER_INFO, &driver_info, sizeof DRIVER_INFO, 0, 0, 0);
 		if (b_res){
-			print_messages::print_mes(TEXT("The driver is here 0x%I64X-0x%I64X "),
+			print_messages::print_mes(TEXT("The driver is loaded here 0x%I64X-0x%I64X "),
 				driver_info.DriverStart, 
 				driver_info.DriverStart + driver_info.DriverSize);
 		}
 	}
+
 
 	/*  */
 	bool MemAllocator::start_set_thread() {
@@ -98,7 +99,7 @@ namespace memory_allocator {
 	}
 
 	/* Read a one byte from memory */
-	bool MemAllocator::read_memory_byte() {
+	bool MemAllocator::read_one_byte() {
 		ULONG64 address = 0;
 		std::cin >> std::hex >> address;
 		ADDR_BYTE addr_byte = { address, 0 };
@@ -117,7 +118,7 @@ namespace memory_allocator {
 	}
 
 	/* Write a byte to memory */
-	bool MemAllocator::write_memory_byte() {
+	bool MemAllocator::write_one_byte() {
 		ADDR_BYTE addr_byte = { 0 };
 		cin >> std::hex >> addr_byte.addr;
 		int16_t input = 0;
@@ -167,34 +168,53 @@ namespace memory_allocator {
 		'q' -- fast quit
 		*/
 
-		add_unique_command("_starttemp",
-			&memory_allocator::MemAllocator::start_set_thread, " <temp in hex>' -- start and set temp ");
+		add_unique_command("alloc",
+			&memory_allocator::MemAllocator::alloc_memory_pool, 
+			" <char[20]>' -- allocate memory and set char[20] as its content");
 
-		add_unique_command("_gettemp",
-			&memory_allocator::MemAllocator::get_temp, "' -- get temp ");
+		add_unique_command("free",
+			&memory_allocator::MemAllocator::free_memory_pool, 
+			" <addr>' -- free allocated memory ");
 
-		add_unique_command("_getsecret",
-			&memory_allocator::MemAllocator::get_secret, "' -- get secret data ");
+		add_unique_command("read_data",
+			&memory_allocator::MemAllocator::read_char_data_non_secure, 
+			" <addr>' -- read char[] data from <addr> ");
 
-		add_unique_command("_stoptemp",
-			&memory_allocator::MemAllocator::stop_this_thread, "' -- stop temp loop");
+		add_unique_command("write_data",
+			&memory_allocator::MemAllocator::write_char_data_non_secure, 
+			" <addr> <char[20]>' -- write char data[20]  to <addr> ");
+
+		add_unique_command("read_byte",
+			&memory_allocator::MemAllocator::read_one_byte, 
+			" <addr>' -- read 1 byte from <addr>");
+
+		add_unique_command("write_byte",
+			&memory_allocator::MemAllocator::write_one_byte, 
+			" <addr> <value>' -- write 1 byte with <value> to <addr>");
+
+		add_unique_command("get_secret",
+			&memory_allocator::MemAllocator::get_secret, 
+			"' -- get secret data ");
 
 		add_unique_command("latency",
-			&memory_allocator::MemAllocator::measure_latency, " <num of measures>' -- measure the memory access latency ");
+			&memory_allocator::MemAllocator::measure_latency, 
+			" <num of measures>' -- measure the memory access latency ");
 
-		add_unique_command("_read1",
-			&memory_allocator::MemAllocator::read_memory_byte, " <addr>' -- read 1 byte from <addr>");
+// 		add_unique_command("_starttemp",
+// 			&memory_allocator::MemAllocator::start_set_thread, " <temp in hex>' -- start and set temp ");
+// 
+// 		add_unique_command("_gettemp",
+// 			&memory_allocator::MemAllocator::get_temp, "' -- get temp ");
+// 
+// 		add_unique_command("_stoptemp",
+// 			&memory_allocator::MemAllocator::stop_this_thread, "' -- stop temp loop");
 
-		add_unique_command("_write1",
-			&memory_allocator::MemAllocator::write_memory_byte, " <addr> <value>' -- write <value> to <addr>");
-
-		add_unique_command("exit", NULL, "' -- exit this app ");
-		add_unique_command("q", NULL, "' -- fast quit");
+		add_unique_command("x", NULL, "' -- exit this app");
 	}
 
 	void print_supported_commands(LPCTSTR name) {
 		std::wcout << name;
-		std::cout << " allocates the sensitive data in the kernel mode :O" << endl;
+		std::cout << " allocates & accesses the data in the kernel-mode memory" << endl;
 		for (const auto & item : g_CommandsList) {
 			cout << " '" << item.first << item.second.key_definition << endl;
 		}

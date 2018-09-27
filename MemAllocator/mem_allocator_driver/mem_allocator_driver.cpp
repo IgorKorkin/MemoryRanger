@@ -80,6 +80,7 @@ _Use_decl_annotations_ static void DriverpDriverUnload(
 
   g_basic_access.stop_this_thread();
   g_basic_access.free_secret();
+
   remove_symbol_link(MEM_ALLOCATOR_LINKNAME_APP);
   remove_control_device(driver_object);
 
@@ -184,18 +185,22 @@ _Use_decl_annotations_ static NTSTATUS DriverpDeviceControl(IN PDEVICE_OBJECT pD
 				info = in_buf_sz;
 			}
 			break;
+
 		case MEM_ALLOCATOR_START_SET_THREAD:
 			status = g_basic_access.start_set_thread(in_buf, out_buf);
 			break;
 		case MEM_ALLOCATOR_GET_TEMP:
 			status = g_basic_access.get_temp(in_buf, in_buf_sz);
 			break;
+
 		case MEM_ALLOCATOR_GET_SECRET:
 			status = g_basic_access.get_secret(in_buf, in_buf_sz);
 			break;	
+
 		case MEM_ALLOCATOR_STOP_THIS_THREAD:
 			status = g_basic_access.stop_this_thread();
 			break;
+
 		case MEM_ALLOCATOR_MEASURE_LATENCY:
 			status = g_basic_access.measure_latency(in_buf, in_buf_sz, out_buf, out_buf_sz);
 			info = in_buf_sz;
@@ -222,6 +227,52 @@ _Use_decl_annotations_ static NTSTATUS DriverpDeviceControl(IN PDEVICE_OBJECT pD
 					pdata->value, pdata->addr);
 			}
 			break;
+
+		case MEM_ALLOCATOR_ALLOCATE_MEMORY:
+			if (in_buf_sz == sizeof ALLOCATED_DATA){
+				ALLOCATED_DATA *data = (ALLOCATED_DATA*)in_buf;
+				if (data){
+					data->address = alignedExAllocatePoolWithTag(sizeof ALLOCATED_DATA::content);
+					if (data->address && data->content) {
+						RtlSecureZeroMemory(data->address, sizeof ALLOCATED_DATA::content);
+						RtlCopyMemory(data->address, data->content, sizeof data->content);
+						MEM_ALLOCATOR_LOGGER("allocates and sets  \"%s\"  to the memory 0x%I64X.", 
+							data->content, data->address);
+					}
+				}
+			}
+			break;
+
+		case MEM_ALLOCATOR_READ_CHAR_DATA:
+			if (in_buf_sz == sizeof ALLOCATED_DATA) {
+				ALLOCATED_DATA *data = (ALLOCATED_DATA*)in_buf;
+				if (data && data->address && data->content) {
+					RtlCopyMemory(data->content, data->address, sizeof data->content);
+					MEM_ALLOCATOR_LOGGER("reads  \"%s\"  from the memory 0x%I64X.", data->content, data->address);
+				}
+			}
+			break;
+
+		case MEM_ALLOCATOR_WRITE_CHAR_DATA:
+			if (in_buf_sz == sizeof ALLOCATED_DATA) {
+				ALLOCATED_DATA *data = (ALLOCATED_DATA*)in_buf;
+				if (data && data->address && data->content) {
+					RtlCopyMemory(data->address, data->content, sizeof data->content);
+					MEM_ALLOCATOR_LOGGER("writes  \"%s\"  to the memory 0x%I64X.", data->content, data->address);
+				}	
+			}
+			break;
+
+		case MEM_ALLOCATOR_FREE_MEMORY_POOL:
+			if (in_buf_sz == sizeof ALLOCATED_DATA) {
+				ALLOCATED_DATA *data = (ALLOCATED_DATA*)in_buf;
+				if (data && data->address){
+					alignedExFreePoolWithTag(data->address);
+					MEM_ALLOCATOR_LOGGER("frees the memory 0x%I64X.", data->address);
+				}
+			}
+			break;
+
 		default: {}
 	}
 

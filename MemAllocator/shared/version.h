@@ -8,9 +8,9 @@
 //   'B' - British version
 //   'R' - Russian version
 
-//#define THIS_VER_IS 'A' 
+#define THIS_VER_IS 'A' 
 //#define THIS_VER_IS 'B' 
-#define THIS_VER_IS 'R' 
+//#define THIS_VER_IS 'R' 
 
 #if 'A' == THIS_VER_IS
 	#define US_DATA

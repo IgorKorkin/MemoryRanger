@@ -32,7 +32,8 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 					return 0;
 				}
 				cin.clear();
-				cin.ignore(10000, '\n');
+				//cin.ignore(10000, '\n');
+				fflush(stdin);
 				std::cout << endl;
 			} while (true);
 		}
