@@ -1,4 +1,7 @@
 # MemoryRanger
+<p align="center"><br><br><b></i>-> All updates for the ADFSL2019 conference will be uploaded soon <-</i></b><br><br><br></p>
+
+
 ![alt text](https://github.com/IgorKorkin/MemoryRanger/blob/master/before_and_after_memoryranger.png)
 
 This hypervisor isolates the memory of protected drivers using separate EPT structures for each of them
