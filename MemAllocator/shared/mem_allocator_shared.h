@@ -3,15 +3,19 @@
 
 #include "version.h"
 
+#include "..\..\utils\files_structs.h"
+
 #if defined US_DATA
 	#define		MEM_ALLOCATOR_NAME				L"MemAllocatorUS"
 #elif defined UK_DATA
 	#define		MEM_ALLOCATOR_NAME				L"MemAllocatorUK"
 #elif defined RU_DATA
 	#define		MEM_ALLOCATOR_NAME				L"MemAllocatorRU"
+#elif defined BUDGET
+	#define		MEM_ALLOCATOR_NAME				L"MemAllocatorBudget"
 #endif
 
-
+#define		MEM_ALLOCATOR_DETAILS			L"works with files, allocates & accesses the data in the kernel-mode memory"
 #define		MEM_ALLOCATOR_SYS_FILE			MEM_ALLOCATOR_NAME \
 											L".sys"
 // There are symbols for driver
@@ -36,7 +40,13 @@ enum ALLOCATOR_COMMANDS {
 	ALLOCATE_MEMORY,
 	FREE_MEMORY_POOL,
 	READ_CHAR_DATA,
-	WRITE_CHAR_DATA
+	WRITE_CHAR_DATA, 
+	//////////////////////////////////////////////////////////////////////////
+	CREATE_FILE,
+	OPEN_ONLY,
+	READ_FILE,
+	WRITE_FILE,
+	CLOSE_FILE
 };
 
 #define MEM_ALLOCATOR_CTL_CODE(_Function_)   (unsigned) CTL_CODE(MEM_ALLOCATOR_DEVICE_IOCTL, (_Function_), METHOD_NEITHER, FILE_ANY_ACCESS)
@@ -97,5 +107,35 @@ typedef struct _ALLOCATED_DATA {
 
 #define MEM_ALLOCATOR_READ_CHAR_DATA	 MEM_ALLOCATOR_CTL_CODE(READ_CHAR_DATA )
 #define MEM_ALLOCATOR_WRITE_CHAR_DATA	 MEM_ALLOCATOR_CTL_CODE(WRITE_CHAR_DATA)
+
+// typedef struct _CREATE_THE_FILE {
+// 	int 		path_sz; // = wsclen(path_to_file)
+// 	wchar_t 	path_to_file[260];
+// 	char 		content[80];
+// 	__out long	status;
+// }CREATE_THE_FILE;
+#define MEM_ALLOCATOR_CREATE_FILE	MEM_ALLOCATOR_CTL_CODE(CREATE_FILE)
+
+// typedef struct _OPEN_THE_FILE {
+// 	__in int 		path_sz; // = wsclen(path_to_file)
+// 	__in wchar_t 	path_to_file[260];
+// 	__in ULONG		shared_access;
+// 	__out HANDLE	handle;
+// 	__out void*		object;
+// 	__out long		status;
+// }OPEN_THE_FILE;
+#define MEM_ALLOCATOR_OPEN_ONLY		MEM_ALLOCATOR_CTL_CODE(OPEN_ONLY)
+
+// typedef struct _READ_THE_FILE {
+// 	int 		path_sz; // = wsclen(path_to_file)
+// 	wchar_t 	path_to_file[260];
+// 	HANDLE		handle;
+// 	void*		object;
+// 	char 		content[80];
+// 	__out long	status;
+// }READ_THE_FILE, WRITE_THE_FILE;
+#define MEM_ALLOCATOR_READ_FILE		MEM_ALLOCATOR_CTL_CODE(READ_FILE)
+#define MEM_ALLOCATOR_WRITE_FILE	MEM_ALLOCATOR_CTL_CODE(WRITE_FILE)
+#define MEM_ALLOCATOR_CLOSE_FILE	MEM_ALLOCATOR_CTL_CODE(CLOSE_FILE)
 
 #endif // __MEM_ALLOCATOR_SHARED_H__

@@ -83,7 +83,7 @@ _Use_decl_annotations_ NTSTATUS DriverEntry(PDRIVER_OBJECT driver_object,
   driver_object->MajorFunction[IRP_MJ_READ] =
   driver_object->MajorFunction[IRP_MJ_WRITE] = DriverpReadWrite;
   driver_object->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DriverpDeviceControl;
-  status = create_device(driver_object, NULL, ALLMEMPRO_DEVICENAME_DRV, ALLMEMPRO_LINKNAME_DRV);
+  status = create_device(driver_object, NULL, MEM_RANGER_DEVICENAME_DRV, MEM_RANGER_LINKNAME_DRV);
 
   HYPERPLATFORM_COMMON_DBG_BREAK();
 
@@ -394,7 +394,7 @@ _Use_decl_annotations_ static NTSTATUS DriverpDeviceControl(
 	read_param(pIrp, in_buf, in_buf_sz, out_buf, out_buf_sz);
 	switch (stack->Parameters.DeviceIoControl.IoControlCode)
 	{
-	case ALLMEMPRO_ADD_MEMORY_ACCESS_RULE:
+	case MEM_RANGER_ADD_MEMORY_ACCESS_RULE:
 		if ((in_buf_sz == sizeof MEMORY_ACCESS_RULE) && in_buf) {
 			MEMORY_ACCESS_RULE mem_rule = { 0 };
 			RtlCopyMemory(&mem_rule, in_buf, sizeof MEMORY_ACCESS_RULE);

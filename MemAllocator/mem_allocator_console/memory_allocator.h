@@ -10,6 +10,7 @@
 #include "..\..\utils\drivers_launch_pad.h" // DriversLaunchPad
 #include "..\..\utils\print_messages.h"
 #include "..\shared\mem_allocator_shared.h" // IOCTL-codes
+#include "..\..\utils\ctl_files.h" // commands and descriptions
 
 #include <iostream>
 #include <algorithm>
@@ -18,11 +19,12 @@
 #include <vector>
 #include <map>
 
+#include <iostream>
+#include "..\..\utils\console_font_colors.h" // add colors for the console
+
 using namespace std;
 
 namespace memory_allocator{
-
-	
 
 	class MemAllocator : public drivers_launch_pad::DriversLaunchPad
 	{
@@ -52,7 +54,7 @@ namespace memory_allocator{
 		/* Write a byte to memory */
 		bool write_one_byte();
 
-		bool check_input_string(char *input) {
+		bool check_string(char *input) {
 			bool b_res = false;
 			size_t len = strlen(input);
 			for (size_t i = 0; i < len; i++) {
@@ -65,12 +67,25 @@ namespace memory_allocator{
 			return b_res;
 		}
 
+		bool check_string(TCHAR *input) {
+			bool b_res = false;
+			size_t len = _tcslen(input);
+			for (size_t i = 0; i < len; i++) {
+				b_res = _istgraph(input[i]) || _istspace(input[i]);
+				if (!b_res) { break; }
+			}
+			if (!b_res) {
+				wcout << "  The input string:  \"" << input << "\"  is wrong, try again!" << endl;
+			}
+			return b_res;
+		}
+
 		bool alloc_memory_pool() {
 			bool b_res = false;
 			ALLOCATED_DATA char_data = { 0 };
 			cin.ignore(); // ignore one whitespace between the command and params
 			cin.getline(char_data.content, sizeof(char_data.content));
-			if (check_input_string(char_data.content)) {
+			if (check_string(char_data.content)) {
 				b_res =
 					scm_manager.send_ctrl_code(MEM_ALLOCATOR_ALLOCATE_MEMORY, (LPVOID)&char_data, sizeof ALLOCATED_DATA, NULL, 0, 0);
 				if (b_res) {
@@ -146,7 +161,7 @@ namespace memory_allocator{
 			std::cin >> std::hex >> data.address;
 			cin.ignore(); // ignore one whitespace between the command and params
 			cin.getline(data.content, sizeof(data.content));
-			if (check_input_string(data.content)) {
+			if (check_string(data.content)) {
 				b_res =
 					scm_manager.send_ctrl_code(MEM_ALLOCATOR_WRITE_CHAR_DATA, &data, sizeof ALLOCATED_DATA, NULL, 0, 0);
 				if (b_res) {
@@ -164,7 +179,7 @@ namespace memory_allocator{
 			if (allocated_addresses.end() != find(allocated_addresses.begin(), allocated_addresses.end(), data.address)) {
 				cin.ignore(); // ignore one whitespace between the command and params
 				cin.getline(data.content, sizeof(data.content));
-				if(check_input_string(data.content)) {
+				if(check_string(data.content)) {
 					b_res =
 						scm_manager.send_ctrl_code(MEM_ALLOCATOR_WRITE_CHAR_DATA, &data, sizeof ALLOCATED_DATA, NULL, 0, 0);
 					if (b_res) {
@@ -181,20 +196,29 @@ namespace memory_allocator{
 			return b_res;
 		}
 
+		bool create_file();
+		
+		bool open_file();
+		
+		bool read_file();
+		
+		bool write_file();
+		
+		bool close_file();
+
 		private:
 			std::vector<void*> allocated_addresses;
 	};
 
-	//////////////////////////////////////////////////////////////////////////
-
 	
+
 	typedef bool(memory_allocator::MemAllocator::*TControlFunc)(void);
 
 	void add_unique_command(const std::string keyName, const TControlFunc keyFunction, const std::string def);
 
 	void init_input_commands();
 
-	void print_supported_commands(LPCTSTR name);
+	void print_supported_commands(eku::BASIC_COLORS titlecolor, LPCTSTR name, LPCTSTR details);
 
 	const enum class PARSE_RESULT: int {
 		WRONG = -1,

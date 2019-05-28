@@ -36,7 +36,7 @@ namespace drivers_launch_pad {
 			if (scm_manager.start_driver()) {
 				if (INVALID_HANDLE_VALUE != scm_manager.open_device(symbolLink)) {
 					b_res = true;
-					print_messages::print_mes(L"The [%s] driver is loaded!", serviceName);
+					//print_messages::print_mes(L"The [%s] driver is loaded!", serviceName);
 					//	*for debugging process:
 					// 	scm_manager.close_device(m_hNeither);
 					// 	scm_manager.stop_driver();

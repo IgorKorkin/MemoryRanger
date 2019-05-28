@@ -11,6 +11,7 @@
 #include "common.h"
 #include "..\shared\mem_attacker_shared.h" // IOCTL-codes
 #include "vulnerable_code.h"
+#include "..\..\utils\zwfile.h"
 
 extern "C" {
 

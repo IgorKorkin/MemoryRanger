@@ -74,14 +74,15 @@ bool RweShouldWeProtectItbyRules(const _In_ void* src_address, const _In_ void* 
 /*  */
 bool RweShouldWeAddMemoryAccessRule(const _In_ void* src_address);
 
+bool RweIsInsideIsolatedDrvAddFileObj(void* driverAddr, void* fileObj);
 
 bool RweIsInsideIsolatedDrvAddPool(void* driverAddr, void* poolStart, SIZE_T poolSize);
-
-void RweAddAllocatedPool(void* driverAddr, void* poolStart, SIZE_T poolSize);
 
 _IRQL_requires_max_(PASSIVE_LEVEL) RweData* RweAllocData();
 
 _IRQL_requires_max_(PASSIVE_LEVEL) void RweFreeData(_In_ RweData* rwe_data);
+
+void RweAddFileObjRange(void* address, SIZE_T size);
 
 void RweAddAllocRange(void* address, SIZE_T size);
 
@@ -101,13 +102,24 @@ void RweAddSrcRange(_In_ void* address, _In_ SIZE_T size);
 
 void RweAddDstRange(_In_ void* address, _In_ SIZE_T size);
 
+/**/
+bool RweIsInsideFileObjectsRange(void* address);
+
+/**/
+bool RweIsInsideFileObjectsRangePageAlign(void* address);
+
 /* check if 'address' belongs to the pages with the protected region */
 bool RweIsInsideMemoryAllocationRangePageAlign(void* address);
 
 /* Precisely check if 'address' belongs to the protected region */
 bool RweIsInsideMemoryAllocationRange(_In_ void* address);
 
+/**/
 bool RweDelAllocationRange(void* driverAddress, void* allocAddr);
+
+/**/
+bool RweDelFileObject(void* driverAddress, void* fileobjAddr);
+
 
 /* Protected drivers range by MemoryRanger using page align*/
 bool RweIsInsideIsolatedDriversRangePageAlign(_In_ void* address);

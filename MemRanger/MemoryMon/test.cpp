@@ -423,11 +423,19 @@ _Use_decl_annotations_ static void TestpLoadImageNotifyRoutine(
 		RTL_CONSTANT_STRING(L"*\\NTKRNLMP.EXE"),
 		RTL_CONSTANT_STRING(L"*\\NTKRNLAMP.EXE"),
 
+		// For memory allocation:
 		RTL_CONSTANT_STRING(L"*\\WDFLDR.SYS"),
 		RTL_CONSTANT_STRING(L"*\\WDF01000.SYS"),  //  Wdf01000!LibraryRegisterClient
 		RTL_CONSTANT_STRING(L"*\\BAM.SYS"), // Background Activity Moderator Driver (bam) for EPROCESS
 
-		RTL_CONSTANT_STRING(L"*\\ALLMEMPRO.SYS")
+		// For read\write operations with FILE_OBJECT
+		RTL_CONSTANT_STRING(L"*\\FLTMGR.SYS"),	//  Microsoft Filesystem Filter Manager
+		RTL_CONSTANT_STRING(L"*\\WCIFS.SYS"),	//  Windows Container Isolation (wcifs) Service, wcifs!WcPreWrite
+		RTL_CONSTANT_STRING(L"*\\LUAFV.SYS"),	//  LUA File Virtualization Filter Driver or UAC File Virtualization, luafv!LuafvPreWrite
+		RTL_CONSTANT_STRING(L"*\\WOF.SYS"),		//  Windows Overlay Filter, Wof!WofAcquireFileSystemRundown
+		RTL_CONSTANT_STRING(L"*\\NTFS.SYS"),	//  New Technology File System , NTFS!NtfsFsdWrite
+
+		RTL_CONSTANT_STRING(L"*\\MEMORYRANGER.SYS")
 	};
 
 	for (auto& driver : os_drivers) {

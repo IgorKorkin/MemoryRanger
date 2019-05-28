@@ -49,13 +49,12 @@ _IRQL_requires_max_(PASSIVE_LEVEL) bool DriverpIsSuppoetedOS();
 // variables
 //
 
+
 static allocated_memory_access::AllocatedMemoryAccess g_basic_access;
 ////////////////////////////////////////////////////////////////////////////////
 //
 // implementations
 //
-
-
 
 void remove_symbol_link(PWCHAR linkName){
 	UNICODE_STRING device_link;
@@ -168,7 +167,7 @@ _Use_decl_annotations_ static void read_param(IN PIRP pIrp,
 _Use_decl_annotations_ static NTSTATUS DriverpDeviceControl(IN PDEVICE_OBJECT pDeviceObject, IN PIRP pIrp) {
 	UNREFERENCED_PARAMETER(pDeviceObject);
 	PAGED_CODE();
-
+	static zwfile::FileWriter fw_open_file;
 	const auto stack = IoGetCurrentIrpStackLocation(pIrp);
 	PVOID in_buf = NULL, out_buf = NULL;
 	ULONG in_buf_sz = 0, out_buf_sz = 0;
@@ -273,6 +272,16 @@ _Use_decl_annotations_ static NTSTATUS DriverpDeviceControl(IN PDEVICE_OBJECT pD
 			}
 			break;
 
+		case MEM_ALLOCATOR_CREATE_FILE:	zwfile::zw_create_file(in_buf_sz, in_buf); break;
+			
+		case MEM_ALLOCATOR_OPEN_ONLY:	zwfile::zw_open_file(fw_open_file, in_buf_sz, in_buf); break;
+
+		case MEM_ALLOCATOR_READ_FILE:	zwfile::zw_read_file(fw_open_file, in_buf_sz, in_buf); break;
+			
+		case MEM_ALLOCATOR_WRITE_FILE:	zwfile::zw_write_file(fw_open_file, in_buf_sz, in_buf); break;
+
+		case MEM_ALLOCATOR_CLOSE_FILE:	fw_open_file.close(); break;
+
 		default: {}
 	}
 
@@ -348,7 +357,7 @@ _Use_decl_annotations_ NTSTATUS DriverEntry(PDRIVER_OBJECT driver_object,
 	driver_object->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DriverpDeviceControl;
 
 	auto nt_status = create_device(driver_object, NULL, MEM_ALLOCATOR_DEVICENAME_DRV, MEM_ALLOCATOR_LINKNAME_DRV);
-	g_basic_access.allocate_set_secret();
+	//g_basic_access.allocate_set_secret();
 	return nt_status;
 }
 

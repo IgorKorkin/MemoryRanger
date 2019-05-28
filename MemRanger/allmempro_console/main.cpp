@@ -13,6 +13,9 @@
 #include "resource.h"
 #include "..\shared\allmempro_shared.h" // strings defines
 
+#include <iostream>
+#include "..\..\utils\console_font_colors.h" // add colors for the console
+
 using namespace std;
 
 int wmain(int argc, wchar_t *argv[], wchar_t *envp[])
@@ -23,12 +26,14 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[])
 
 	//if (check_windows_support::is_ok()) 
 	{
+		SetConsoleTitle(MEM_RANGER_NAME);
+		eku::setcolor(eku::bright_white, eku::defbackcol);
 		allocated_mem_protector::MemProtector protector; // activate testbed
-		if (protector.is_ok(ALLMEMPRO_RESOURCE, ALLMEMPRO_SYS_FILE, ALLMEMPRO_SERVNAME_APP, ALLMEMPRO_LINKNAME_APP)) 
+		if (protector.is_ok(ALLMEMPRO_RESOURCE, MEM_RANGER_SYS_FILE, MEM_RANGER_SERVNAME_APP, MEM_RANGER_LINKNAME_APP)) 
 		{
 			allocated_mem_protector::init_input_commands();
 			do {
-				allocated_mem_protector::print_supported_commands();
+				allocated_mem_protector::print_supported_commands(eku::light_yellow, MEM_RANGER_NAME, MEM_RANGER_DETAILS);
 				switch (allocated_mem_protector::parse_call(protector)) {
 				case allocated_mem_protector::PARSE_RESULT::WRONG:
 					std::cout << " ---wrong input, try again---" << endl;

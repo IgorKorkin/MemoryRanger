@@ -12,7 +12,7 @@ namespace allocated_mem_protector {
 		cin >> std::hex >> memory_access_rule.allocSize;
 
 		auto b_res = 
-			scm_manager.send_ctrl_code(ALLMEMPRO_ADD_MEMORY_ACCESS_RULE, (LPVOID)&memory_access_rule, sizeof MEMORY_ACCESS_RULE, NULL, 0, 0);
+			scm_manager.send_ctrl_code(MEM_RANGER_ADD_MEMORY_ACCESS_RULE, (LPVOID)&memory_access_rule, sizeof MEMORY_ACCESS_RULE, NULL, 0, 0);
 		
 		if (b_res){
 			print_messages::print_mes(TEXT("the rule has been added"));
@@ -105,9 +105,12 @@ namespace allocated_mem_protector {
 		add_unique_command("x", NULL, "' -- exit this app");
 	}
 
-	void print_supported_commands() {
-		std::cout << endl;
-		cout << "AllMemPro protects the allocated data :) " << endl;
+	void print_supported_commands(eku::BASIC_COLORS titlecolor, LPCTSTR name, LPCTSTR details) {
+		eku::setcolor(titlecolor, eku::defbackcol);
+
+		std::wcout << name << " " << details << endl;
+
+		eku::setcolor(eku::white, eku::defbackcol);
 		for (const auto & item : g_CommandsList) {
 			cout << " '" << item.first << item.second.key_definition << endl;
 		}

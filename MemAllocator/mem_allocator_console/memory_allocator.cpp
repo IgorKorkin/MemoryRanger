@@ -139,6 +139,60 @@ namespace memory_allocator {
 	}
 
 	//////////////////////////////////////////////////////////////////////////
+	// file system functions
+
+	bool MemAllocator::create_file() {
+		return ctl_files::create_file(scm_manager, MEM_ALLOCATOR_CREATE_FILE);
+	}
+
+	ULONG set_shared_access() {
+		const char read_access[] = " r";
+		const char write_access[] = " w";
+		const char read_write_access[] = " rw";
+
+		#define FILE_SHARE_READ                 0x00000001  
+		#define FILE_SHARE_WRITE                0x00000002  
+		#define FILE_SHARE_DELETE               0x00000004  
+
+		char shared_access[4] = { 0 };
+		//cin.ignore(); // ignore one whitespace between the command and params
+		if (cin.getline(shared_access, sizeof shared_access)) 			{
+			if (0 == strcmp(shared_access, read_write_access)) {
+				return FILE_SHARE_READ | FILE_SHARE_WRITE;
+			}
+			else if (0 == strcmp(shared_access, read_access)) {
+				return FILE_SHARE_READ;
+			}
+			else if (0 == strcmp(shared_access, write_access)) {
+				return FILE_SHARE_WRITE;
+			}
+		}
+		return NULL;
+	}
+
+	const void print_object_handle(HANDLE handle, void* object) {
+		cout << hex << uppercase << "  handle = " << handle
+			<< "  FILE_OBJECT = " << object << endl;
+	}
+
+	bool MemAllocator::open_file() {
+		return ctl_files::open_file(scm_manager, MEM_ALLOCATOR_OPEN_ONLY);
+	}
+
+	bool MemAllocator::read_file() {
+		return ctl_files::read_file(scm_manager, MEM_ALLOCATOR_READ_FILE);
+	}
+
+	bool MemAllocator::write_file() {
+		return ctl_files::write_file(scm_manager, MEM_ALLOCATOR_WRITE_FILE);
+	}
+
+	bool MemAllocator::close_file() {
+		return ctl_files::close_file(scm_manager, MEM_ALLOCATOR_CLOSE_FILE);
+	}
+	
+
+	//////////////////////////////////////////////////////////////////////////
 
 	struct command_pair_triple {
 		std::string key_definition;
@@ -168,37 +222,57 @@ namespace memory_allocator {
 		'q' -- fast quit
 		*/
 
-		add_unique_command("alloc",
-			&memory_allocator::MemAllocator::alloc_memory_pool, 
-			" <char[20]>' -- allocate memory and set char[20] as its content");
+// 		add_unique_command("alloc",
+// 			&memory_allocator::MemAllocator::alloc_memory_pool, 
+// 			" <char[20]>' -- allocate memory and set char[20] as its content");
 
-		add_unique_command("free",
-			&memory_allocator::MemAllocator::free_memory_pool, 
-			" <addr>' -- free allocated memory ");
+// 		add_unique_command("free",
+// 			&memory_allocator::MemAllocator::free_memory_pool, 
+// 			" <addr>' -- free allocated memory ");
 
-		add_unique_command("read_data",
-			&memory_allocator::MemAllocator::read_char_data_non_secure, 
-			" <addr>' -- read char[] data from <addr> ");
+// 		add_unique_command("read_data",
+// 			&memory_allocator::MemAllocator::read_char_data_non_secure, 
+// 			" <addr>' -- read char[] data from <addr> ");
 
-		add_unique_command("write_data",
-			&memory_allocator::MemAllocator::write_char_data_non_secure, 
-			" <addr> <char[20]>' -- write char data[20]  to <addr> ");
+// 		add_unique_command("write_data",
+// 			&memory_allocator::MemAllocator::write_char_data_non_secure, 
+// 			" <addr> <char[20]>' -- write char data[20]  to <addr> ");
 
 		add_unique_command("read_byte",
-			&memory_allocator::MemAllocator::read_one_byte, 
+			&memory_allocator::MemAllocator::read_one_byte,
 			" <addr>' -- read 1 byte from <addr>");
 
 		add_unique_command("write_byte",
 			&memory_allocator::MemAllocator::write_one_byte, 
 			" <addr> <value>' -- write 1 byte with <value> to <addr>");
 
-		add_unique_command("get_secret",
-			&memory_allocator::MemAllocator::get_secret, 
-			"' -- get secret data ");
+// 		add_unique_command("get_secret",
+// 			&memory_allocator::MemAllocator::get_secret, 
+// 			"' -- get secret data ");
 
-		add_unique_command("latency",
-			&memory_allocator::MemAllocator::measure_latency, 
-			" <num of measures>' -- measure the memory access latency ");
+// 		add_unique_command("latency",
+// 			&memory_allocator::MemAllocator::measure_latency, 
+// 			" <num of measures>' -- measure the memory access latency ");
+
+		add_unique_command(ctl_files::f_create_command, 
+			&memory_allocator::MemAllocator::create_file,
+			ctl_files::f_create_descript);
+
+		add_unique_command(ctl_files::f_open_command, 
+			&memory_allocator::MemAllocator::open_file,
+			ctl_files::f_open_descript);
+		
+		add_unique_command(ctl_files::f_read_command, 
+			&memory_allocator::MemAllocator::read_file,
+			ctl_files::f_read_descript);
+
+		add_unique_command(ctl_files::f_write_command,
+			&memory_allocator::MemAllocator::write_file,
+			ctl_files::f_write_descript);
+
+		add_unique_command(ctl_files::f_close_command, 
+			&memory_allocator::MemAllocator::close_file,
+			ctl_files::f_close_descript);
 
 // 		add_unique_command("_starttemp",
 // 			&memory_allocator::MemAllocator::start_set_thread, " <temp in hex>' -- start and set temp ");
@@ -212,9 +286,12 @@ namespace memory_allocator {
 		add_unique_command("x", NULL, "' -- exit this app");
 	}
 
-	void print_supported_commands(LPCTSTR name) {
-		std::wcout << name;
-		std::cout << " allocates & accesses the data in the kernel-mode memory" << endl;
+	void print_supported_commands(eku::BASIC_COLORS titlecolor, LPCTSTR name, LPCTSTR details) {
+		eku::setcolor(titlecolor, eku::defbackcol);
+		
+		std::wcout << name << " " << details << endl;
+		
+		eku::setcolor(eku::white, eku::defbackcol);
 		for (const auto & item : g_CommandsList) {
 			cout << " '" << item.first << item.second.key_definition << endl;
 		}

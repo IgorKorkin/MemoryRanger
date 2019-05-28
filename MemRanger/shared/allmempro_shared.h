@@ -1,22 +1,25 @@
-#ifndef __ALLMEMPRO_SHARED_H__
-#define __ALLMEMPRO_SHARED_H__
+#ifndef __MEM_RANGER_SHARED_H__
+#define __MEM_RANGER_SHARED_H__
 
-#define		ALLMEMPRO_NAME				L"AllMemPro"
-#define		ALLMEMPRO_SYS_FILE			ALLMEMPRO_NAME \
+#define		MEM_RANGER_NAME				L"MemoryRanger"
+#define		MEM_RANGER_SYS_FILE			MEM_RANGER_NAME \
 										L".sys"
+
+#define		MEM_RANGER_DETAILS			L"protects the kernel-mode memory"
+
 // There are symbols for driver
-#define		ALLMEMPRO_DEVICENAME_DRV	L"\\Device\\dev" ALLMEMPRO_NAME
-#define		ALLMEMPRO_LINKNAME_DRV 		L"\\DosDevices\\" ALLMEMPRO_NAME
+#define		MEM_RANGER_DEVICENAME_DRV	L"\\Device\\dev" MEM_RANGER_NAME
+#define		MEM_RANGER_LINKNAME_DRV 		L"\\DosDevices\\" MEM_RANGER_NAME
 
 // There are symbols for command line app
-#define		ALLMEMPRO_LINKNAME_APP		L"\\\\.\\" ALLMEMPRO_NAME
-#define		ALLMEMPRO_SERVNAME_APP		ALLMEMPRO_NAME
+#define		MEM_RANGER_LINKNAME_APP		L"\\\\.\\" MEM_RANGER_NAME
+#define		MEM_RANGER_SERVNAME_APP		MEM_RANGER_NAME
 
 
 // Device type in user defined range
-#define ALLMEMPRO_DEVICE_IOCTL  0x8301
+#define MEM_RANGER_DEVICE_IOCTL  0x8301
 
-#define ALLMEMPRO_ADD_MEMORY_ACCESS_RULE		(unsigned) CTL_CODE(ALLMEMPRO_DEVICE_IOCTL, 0x820, METHOD_NEITHER, FILE_ANY_ACCESS)
+#define MEM_RANGER_ADD_MEMORY_ACCESS_RULE		(unsigned) CTL_CODE(MEM_RANGER_DEVICE_IOCTL, 0x820, METHOD_NEITHER, FILE_ANY_ACCESS)
 
 typedef struct _MEMORY_ACCESS_RULE {
 	void*				drvStartAddr;
@@ -41,8 +44,8 @@ typedef struct _MEMORY_ACCESS_RULE {
 //    To allow another driver from 'drvStartAddr2-drvSize2' write to this memory
 //    you have to add similar MEMORY_POLICY
 
-#define ALLMEMPRO_GET_MEMORY_ACCESS_RULES		(unsigned) CTL_CODE(ALLMEMPRO_DEVICE_IOCTL, 0x820+1, METHOD_NEITHER, FILE_ANY_ACCESS)
+#define ALLMEMPRO_GET_MEMORY_ACCESS_RULES		(unsigned) CTL_CODE(MEM_RANGER_DEVICE_IOCTL, 0x820+1, METHOD_NEITHER, FILE_ANY_ACCESS)
 
-#define ALLMEMPRO_SET_TSC_DELTA			(unsigned) CTL_CODE(ALLMEMPRO_DEVICE_IOCTL, 0x820+2, METHOD_NEITHER, FILE_ANY_ACCESS)
+#define ALLMEMPRO_SET_TSC_DELTA			(unsigned) CTL_CODE(MEM_RANGER_DEVICE_IOCTL, 0x820+2, METHOD_NEITHER, FILE_ANY_ACCESS)
 
-#endif // __ALLMEMPRO_SHARED_H__
+#endif // __MEM_RANGER_SHARED_H__

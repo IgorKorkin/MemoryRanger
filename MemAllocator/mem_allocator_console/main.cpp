@@ -6,6 +6,9 @@
 
 #include "resource.h"  // resource defines
 
+#include <iostream>
+#include "..\..\utils\console_font_colors.h" // add colors for the console
+
 int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 
 	argc; argv; envp; // to avoid warning C4100
@@ -15,15 +18,17 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 //	if (check_windows_support::is_ok()) 
 	{
 		memory_allocator::MemAllocator allocator;
+		SetConsoleTitle(L"The boss app"/*MEM_ALLOCATOR_NAME*/);
+		eku::setcolor(eku::bright_white, eku::defbackcol);
 		if (allocator.is_ok(MEM_ALLOCATOR_RES_DRIVER, MEM_ALLOCATOR_SYS_FILE, MEM_ALLOCATOR_SERVNAME_APP, MEM_ALLOCATOR_LINKNAME_APP)) 
 		{
-			allocator.print_driver_info();
+			//allocator.print_driver_info();
 			memory_allocator::init_input_commands();
 			do {
-				memory_allocator::print_supported_commands(MEM_ALLOCATOR_NAME);
+				memory_allocator::print_supported_commands(eku::white, MEM_ALLOCATOR_NAME, MEM_ALLOCATOR_DETAILS);
 				switch (memory_allocator::parse_call(allocator)) {
 				case memory_allocator::PARSE_RESULT::WRONG:
-					std::cout << " ---wrong input, try again---" << endl;
+					std::cout << eku::red << "---wrong input, try again---" << endl;
 					break;
 				case memory_allocator::PARSE_RESULT::QUIT:
 					cin.ignore();
@@ -38,4 +43,5 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 			} while (true);
 		}
 	}
+	getchar();
 }

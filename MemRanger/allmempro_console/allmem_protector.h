@@ -21,6 +21,11 @@
 #include <string>
 #include <vector>
 #include <map>
+
+#include <iostream>
+#include "..\..\utils\console_font_colors.h"
+
+
 using namespace std;
 
 
@@ -49,7 +54,7 @@ namespace allocated_mem_protector{
 
 	void init_input_commands();
 
-	void print_supported_commands();
+	void print_supported_commands(eku::BASIC_COLORS titlecolor, LPCTSTR name, LPCTSTR details);
 
 	const enum class PARSE_RESULT : int {
 		WRONG = -1,

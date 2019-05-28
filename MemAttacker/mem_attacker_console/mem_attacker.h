@@ -7,6 +7,7 @@
 #include "..\..\utils\drivers_launch_pad.h" // DriversLaunchPad
 #include "..\..\utils\print_messages.h"
 #include "..\shared\mem_attacker_shared.h" // IOCTL-codes
+#include "..\..\utils\ctl_files.h"
 
 #include <iostream>
 #include <algorithm>
@@ -14,6 +15,9 @@
 #include <string>
 #include <vector>
 #include <map>
+
+#include <iostream>
+#include "..\..\utils\console_font_colors.h"
 
 namespace mem_attacker {
 
@@ -38,6 +42,21 @@ namespace mem_attacker {
 
 		/* Write a char string to the memory */
 		bool write_char_data();
+
+		//////////////////////////////////////////////////////////////////////////
+
+		bool create_file();
+
+		bool open_file();
+
+		bool file_by_hijacking();
+
+		bool read_file();
+
+		bool write_file();
+
+		bool close_file();
+
 
 		//////////////////////////////////////////////////////////////////////////
 
@@ -71,7 +90,7 @@ namespace mem_attacker {
 
 	void init_input_commands();
 
-	void print_supported_commands();
+	void print_supported_commands(eku::BASIC_COLORS titlecolor, LPCTSTR name, LPCTSTR details);
 
 	const enum class PARSE_RESULT : int {
 		WRONG = -1,

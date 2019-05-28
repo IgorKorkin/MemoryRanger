@@ -148,6 +148,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\utils\console_font_colors.h" />
+    <ClCompile Include="..\..\utils\ctl_files.cpp" />
     <ClCompile Include="..\..\utils\disable_compatibility_window.cpp" />
     <ClCompile Include="..\..\utils\drivers_launch_pad.cpp" />
     <ClCompile Include="..\..\utils\print_messages.cpp" />
@@ -159,8 +161,10 @@
     <ClCompile Include="payload_use_after_free.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\utils\ctl_files.h" />
     <ClInclude Include="..\..\utils\disable_compatibility_window.h" />
     <ClInclude Include="..\..\utils\drivers_launch_pad.h" />
+    <ClInclude Include="..\..\utils\files_structs.h" />
     <ClInclude Include="..\..\utils\print_messages.h" />
     <ClInclude Include="..\..\utils\scm_util.h" />
     <ClInclude Include="mem_attacker.h" />

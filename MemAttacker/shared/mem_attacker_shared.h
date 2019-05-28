@@ -1,9 +1,14 @@
 #ifndef __MEM_ATTACKER_SHARED_H__
 #define __MEM_ATTACKER_SHARED_H__
 
+#include "..\..\utils\files_structs.h"
+
 #define		MEM_ATTACKER_NAME					L"MemAttacker"
 #define		MEM_ATTACKER_SYS_FILE				MEM_ATTACKER_NAME \
 											L".sys"
+
+#define		MEM_ATTACKER_DETAILS				L"accesses files and kernel-mode code & data illegally :["
+
 // There are symbols for driver
 #define		MEM_ATTACKER_DEVICENAME_DRV	L"\\Device\\dev" MEM_ATTACKER_NAME
 #define		MEM_ATTACKER_LINKNAME_DRV 	L"\\DosDevices\\" MEM_ATTACKER_NAME
@@ -24,6 +29,14 @@ const enum ATTACKER_COMMANDS {
 	WRITE_1_BYTE,
 	READ_CHAR_DATA,
 	WRITE_CHAR_DATA,
+
+	CREATE_FILE,
+	OPEN_ONLY,
+	OPEN_BY_HIJACK,
+	READ_FILE,
+	WRITE_FILE,
+	CLOSE_FILE,
+	//////////////////////////////////////////////////////////////////////////
 	WRITE_8_BYTES,
 	SIMPLE_STACK_OVERFLOW,
 	SIMPLE_POOL_OVERFLOW,
@@ -58,6 +71,20 @@ typedef struct _ALLOCATED_DATA {
 #define MEM_ATTACKER_READ_CHAR_DATA		MEM_ATTACKER_CTL_CODE(READ_CHAR_DATA )
 #define MEM_ATTACKER_WRITE_CHAR_DATA	MEM_ATTACKER_CTL_CODE(WRITE_CHAR_DATA)
 //////////////////////////////////////////////////////////////////////////
+
+
+#define MEM_ATTACKER_CREATE_FILE	MEM_ATTACKER_CTL_CODE(CREATE_FILE)
+
+
+#define MEM_ATTACKER_OPEN_ONLY			MEM_ATTACKER_CTL_CODE(OPEN_ONLY)
+#define MEM_ATTACKER_OPEN_BY_HIJACKING	MEM_ATTACKER_CTL_CODE(OPEN_BY_HIJACK)
+
+
+#define MEM_ATTACKER_READ_FILE		MEM_ATTACKER_CTL_CODE(READ_FILE)
+#define MEM_ATTACKER_WRITE_FILE		MEM_ATTACKER_CTL_CODE(WRITE_FILE)
+#define MEM_ATTACKER_CLOSE_FILE		MEM_ATTACKER_CTL_CODE(CLOSE_FILE)
+//////////////////////////////////////////////////////////////////////////
+
 
 typedef struct _ADDR_8BYTES {
 	ULONG64 addr;

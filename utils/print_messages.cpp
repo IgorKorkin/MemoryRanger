@@ -31,7 +31,7 @@ namespace print_messages
 		{
 			LPTSTR lpMsgBuf;
 			FormatMessage(
-				FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+				FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM ,
 				NULL,
 				GetLastError(),
 				MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), // Default language

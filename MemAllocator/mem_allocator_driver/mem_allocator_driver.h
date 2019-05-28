@@ -11,6 +11,7 @@
 #include "common.h"
 #include "..\shared\mem_allocator_shared.h"
 #include "allocated_mem_access.h"
+#include "..\..\utils\zwfile.h"
 
 
 extern "C" {
@@ -27,6 +28,8 @@ extern "C" {
 	#define THE_TAG '-UK-'
 #elif defined RU_DATA
 	#define THE_TAG '-UR-'
+#elif defined BUDGET
+	#define THE_TAG '-BD-'
 #else
 	#define THE_TAG 'SCRT'
 #endif // DATA_SECRET

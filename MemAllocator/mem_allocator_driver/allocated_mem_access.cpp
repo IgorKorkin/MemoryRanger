@@ -14,6 +14,8 @@ extern "C" namespace allocated_memory_access
 				char secret[30] = "Charles Dickens";
 			#elif defined RU_DATA
 				char secret[30] = "Leo Tolstoy";
+			#elif defined BUDGET
+				char secret[30] = "Leo Tolstoy";
 			#else
 				char secret[30] = "Here is the secret";
 			#endif // DATA_SECRET

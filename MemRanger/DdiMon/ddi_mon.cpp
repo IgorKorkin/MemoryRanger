@@ -104,6 +104,23 @@ static VOID DdimonpHandleExFreePool(_Pre_notnull_ PVOID p);
 static VOID DdimonpHandleExFreePoolWithTag(_Pre_notnull_ PVOID p,
                                            _In_ ULONG tag);
 
+static NTSTATUS DdimonpHandleZwCreateFile(_Out_ PHANDLE FileHandle,
+_In_ ACCESS_MASK DesiredAccess,
+_In_ POBJECT_ATTRIBUTES ObjectAttributes,
+_Out_ PIO_STATUS_BLOCK IoStatusBlock,
+_In_opt_ PLARGE_INTEGER AllocationSize,
+_In_ ULONG FileAttributes,
+_In_ ULONG ShareAccess,
+_In_ ULONG CreateDisposition,
+_In_ ULONG CreateOptions,
+_In_reads_bytes_opt_(EaLength) PVOID EaBuffer,
+_In_ ULONG EaLength
+);
+
+static VOID DdimonpHandleZwClose(
+	_In_ HANDLE Handle
+);
+
 static NTSTATUS DdimonpHandleNtQuerySystemInformation(
     _In_ SystemInformationClass SystemInformationClass,
     _Inout_ PVOID SystemInformation, _In_ ULONG SystemInformationLength,
@@ -173,6 +190,14 @@ static ShadowHookTarget g_ddimonp_hook_targets[] = {
 	{
 		RTL_CONSTANT_STRING(L"EXFREEPOOLWITHTAG"),
 		DdimonpHandleExFreePoolWithTag, nullptr,
+	},
+	{
+		RTL_CONSTANT_STRING(L"ZWCREATEFILE"),
+		DdimonpHandleZwCreateFile, nullptr,
+	},
+	{
+		RTL_CONSTANT_STRING(L"ZWCLOSE"),
+		DdimonpHandleZwClose, nullptr,
 	},
 };
 
@@ -385,6 +410,81 @@ _Use_decl_annotations_ static VOID DdimonpHandleExFreePoolWithTag(PVOID p,
                               return_addr, p, DdimonpTagToString(tag).data());
 }
 
+
+
+// The hook handler for ZwCreateFile(). Logs if ZwCreateFile() is
+// called from where not backed by any image.
+_Use_decl_annotations_ NTSTATUS DdimonpHandleZwCreateFile(_Out_ PHANDLE FileHandle,
+	_In_ ACCESS_MASK DesiredAccess,
+	_In_ POBJECT_ATTRIBUTES ObjectAttributes,
+	_Out_ PIO_STATUS_BLOCK IoStatusBlock,
+	_In_opt_ PLARGE_INTEGER AllocationSize,
+	_In_ ULONG FileAttributes,
+	_In_ ULONG ShareAccess,
+	_In_ ULONG CreateDisposition,
+	_In_ ULONG CreateOptions,
+	_In_reads_bytes_opt_(EaLength) PVOID EaBuffer,
+	_In_ ULONG EaLength) {
+	const auto original = DdimonpFindOrignal(DdimonpHandleZwCreateFile);
+	const auto result = original(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes,
+		ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength);
+	if (!NT_SUCCESS(result)) {
+		return result;
+	}
+
+	// Is it inside image?
+	auto return_addr = _ReturnAddress();
+	if (UtilPcToFileHeader(return_addr)) {
+		// An inspected driver has called the func ZwCreateFile() 
+		if (RweIsInsideIsolatedDriversRange(return_addr)) {
+			if (ShareAccess == NULL){
+				PFILE_OBJECT file_object = NULL;
+				if (NT_SUCCESS(ObReferenceObjectByHandle(*FileHandle, FILE_ALL_ACCESS,
+					*IoFileObjectType, KernelMode, (PVOID *)&file_object, NULL))) {
+					if (file_object)   {   ObDereferenceObject(file_object);   }
+
+					HYPERPLATFORM_COMMON_DBG_BREAK();
+
+					if (RweIsInsideIsolatedDrvAddFileObj(return_addr, file_object)) {
+						RweApplyRanges();
+					}
+				}
+			}
+		}
+
+		return result;
+	}
+
+	HYPERPLATFORM_LOG_INFO_SAFE("%p: ZwCreateFile(P= %p, %wZ)",
+		return_addr, ObjectAttributes->ObjectName);
+
+	return result;
+}
+
+_Use_decl_annotations_ VOID DdimonpHandleZwClose(
+	_In_ HANDLE Handle) {
+	const auto original = DdimonpFindOrignal(DdimonpHandleZwClose);
+
+	
+	auto return_addr = _ReturnAddress();
+	if (UtilPcToFileHeader(return_addr)) {
+		if (RweIsInsideIsolatedDriversRange(return_addr)) {   // Is it inside image?
+			PFILE_OBJECT file_object = NULL;
+			if (NT_SUCCESS(ObReferenceObjectByHandle(Handle, FILE_ALL_ACCESS,
+				*IoFileObjectType, KernelMode, (PVOID *)&file_object, NULL))) {
+				if (file_object) { ObDereferenceObject(file_object); }
+				HYPERPLATFORM_COMMON_DBG_BREAK();
+				
+				if (RweDelFileObject(return_addr, file_object)) {
+					RweApplyRanges();
+				}
+			}
+		}
+	}
+	original(Handle);
+	return;
+}
+
 // The hook handler for ExQueueWorkItem(). Logs if a WorkerRoutine points to
 // where not backed by any image.
 _Use_decl_annotations_ static VOID DdimonpHandleExQueueWorkItem(
@@ -413,46 +513,13 @@ _Use_decl_annotations_ static PVOID DdimonpHandleExAllocatePoolWithTag(
     POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag) {
   const auto original = DdimonpFindOrignal(DdimonpHandleExAllocatePoolWithTag);
   const auto result = original(pool_type, number_of_bytes, tag);
-
-  
+    
   auto return_addr = _ReturnAddress();
 
   // Check and add a rule if it is needed
   if (RweIsInsideIsolatedDrvAddPool(return_addr, result, number_of_bytes)) {
 	  RweApplyRanges();
   }
-
-//   if (RweIsInsideIsolatedDriversRange(return_addr)) {
-// 	  RweAddAllocatedPool(return_addr, result, number_of_bytes);
-// 	  RweApplyRanges();
-// 	  PVOID drv_base = nullptr;
-// 	  ULONG drv_sz = 0;
-// 	  if (UtilpGetModuleBasenSize(return_addr, &drv_base, drv_sz) && drv_base && drv_sz) {
-// 
-// 		  // Allow access to the allocated memory from itself
-// 		  MEMORY_ACCESS_RULE mem_pol = { 0 };
-// 		  mem_pol.drvStartAddr = drv_base;
-// 		  mem_pol.drvSize = drv_sz;
-// 		  mem_pol.allocStartAddr = result;
-// 		  mem_pol.allocSize = number_of_bytes;
-// 		  mem_pol.is_overwritable = 0;
-// 		  mem_pol.is_readable = 0;
-// 		  RweAddMemoryAccessRule(mem_pol);
-// 		  
-// 		  PVOID nt_drv_base = 0;
-// 		  ULONG nt_drv_size = 0;
-// 		  // [Optionally] Allow access to the allocated memory from NT
-// 		  if (UtilpGetNTHeaderInfo(&nt_drv_base, nt_drv_size) && nt_drv_base && nt_drv_size) {
-// 			  RtlSecureZeroMemory(&mem_pol, sizeof MEMORY_ACCESS_RULE);
-// 			  mem_pol.drvStartAddr = nt_drv_base;
-// 			  mem_pol.drvSize = nt_drv_size;
-// 			  mem_pol.allocStartAddr = result;
-// 			  mem_pol.allocSize = number_of_bytes;
-// 			  mem_pol.is_overwritable = 0;
-// 			  mem_pol.is_readable = 0;
-// 			  RweAddMemoryAccessRule(mem_pol); // < allow access to allocated memory from NT
-// 		  }
-//	  }
 
   // Is inside image?
   if (UtilPcToFileHeader(return_addr)) {

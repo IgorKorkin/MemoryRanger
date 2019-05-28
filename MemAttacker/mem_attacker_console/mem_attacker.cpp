@@ -1,5 +1,7 @@
 #include "mem_attacker.h"
-#include <iomanip>
+
+using namespace std;
+
 namespace mem_attacker {
 
 	/* Set NT AUTHORITY\\SYSTEM privileges to the process */
@@ -58,6 +60,37 @@ namespace mem_attacker {
 		}
 		return b_res;
 	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// file system functions
+
+	bool MemAttacker::create_file() {
+		return ctl_files ::create_file(scm_manager, MEM_ATTACKER_CREATE_FILE);
+	}
+
+	bool MemAttacker::open_file() {
+		return ctl_files::open_file(scm_manager, MEM_ATTACKER_OPEN_ONLY);
+	}
+
+	bool MemAttacker::file_by_hijacking() {
+		return ctl_files::open_file_by_hijacking(scm_manager, MEM_ATTACKER_OPEN_BY_HIJACKING);
+	}
+
+	bool MemAttacker::read_file() {
+		return ctl_files::read_file(scm_manager, MEM_ATTACKER_READ_FILE);
+	}
+
+	bool MemAttacker::write_file() {
+		return ctl_files::write_file(scm_manager, MEM_ATTACKER_WRITE_FILE);
+	}
+
+	bool MemAttacker::close_file() {
+		return ctl_files::close_file(scm_manager, MEM_ATTACKER_CLOSE_FILE);
+	}
+
+
+	//////////////////////////////////////////////////////////////////////////
+
 
 	/* Write 8 bytes to the memory */
 	bool MemAttacker::write_8bytes(){
@@ -277,17 +310,30 @@ namespace mem_attacker {
 		'q' --  quit
 		*/
 		
-		add_unique_command("hide", &mem_attacker::MemAttacker::hide_proc, " <ProcessId in dec> ' --  hide process with <ProcessId> by unlinking");
-		add_unique_command("priv", &mem_attacker::MemAttacker::set_priv, " <ProcessId in dec> ' --  set NT AUTHORITY\\SYSTEM privs for <ProcessId>");
+// 		add_unique_command("hide", &mem_attacker::MemAttacker::hide_proc, " <ProcessId in dec> ' --  hide process with <ProcessId> by unlinking");
+// 		add_unique_command("priv", &mem_attacker::MemAttacker::set_priv, " <ProcessId in dec> ' --  set NT AUTHORITY\\SYSTEM privs for <ProcessId>");
 
 		add_unique_command("read_byte", &mem_attacker::MemAttacker::read_1byte, " <Address>  ' -- read 1 byte from memory <Address>");
 		add_unique_command("write_byte", &mem_attacker::MemAttacker::write_1byte, " <Address> <Value in hex>' -- write 1 byte to memory <Address>");
 		
-		add_unique_command("read_data",
-			&mem_attacker::MemAttacker::read_char_data, " <addr>' -- read char[] data from <addr> ");
+// 		add_unique_command("read_data",
+// 			&mem_attacker::MemAttacker::read_char_data, " <addr>' -- read char[] data from <addr> ");
+// 
+// 		add_unique_command("write_data",
+// 			&mem_attacker::MemAttacker::write_char_data, " <addr> <char[]>' -- write char[] data to <addr> ");
 
-		add_unique_command("write_data",
-			&mem_attacker::MemAttacker::write_char_data, " <addr> <char[]>' -- write char[] data to <addr> ");
+		add_unique_command(ctl_files::f_create_command, &mem_attacker::MemAttacker::create_file, ctl_files :: f_create_descript);
+
+		add_unique_command(ctl_files::f_open_command, &mem_attacker::MemAttacker::open_file, ctl_files::f_open_descript);
+
+		add_unique_command(ctl_files::f_open_by_hijacking_command, &mem_attacker::MemAttacker::file_by_hijacking,
+			ctl_files::f_open_by_hijacking_descript);
+
+		add_unique_command(ctl_files::f_read_command, &mem_attacker::MemAttacker::read_file, ctl_files::f_read_descript);
+
+		add_unique_command(ctl_files::f_write_command, &mem_attacker::MemAttacker::write_file, ctl_files::f_write_descript);
+
+		add_unique_command(ctl_files::f_close_command, &mem_attacker::MemAttacker::close_file, ctl_files::f_close_descript);
 
 		//add_unique_command("write8", &mem_attacker::MemAttacker::write_8bytes, " <Address> <Value in hex>' -- write 8 bytes to memory <Address>");
 		//add_unique_command("test_stack", &mem_attacker::MemAttacker::run_simple_stack_overflow, " <BufferSize>' -- test stack overflow with <BufferSize>");
@@ -301,21 +347,17 @@ namespace mem_attacker {
 		add_unique_command("x", NULL, "' -- exit this app");
 	}
 
-	void print_supported_commands() {
-		std::cout << endl;
-		cout << "MemAttacker accesses kernel-mode code & data illegally :[ " << endl;
+	void print_supported_commands(eku::BASIC_COLORS titlecolor, LPCTSTR name, LPCTSTR details) {
+		eku::setcolor(titlecolor, eku::defbackcol);
+		std::wcout << name << " " << details << endl;
+		eku::setcolor(eku::white, eku::defbackcol);
 		for (const auto & item : g_CommandsList) {
 			cout << " '" << item.first << item.second.key_definition << endl;
 		}
-// 		cout << "    to test run 'cmd.exe'" << endl;
-// 		cout << "    to get <ProcessId> run 'tasklist | findstr cmd*' " << endl;
-// 		cout << "    to get privileges run 'whoami' " << endl;
-// 		cout << "    to check privileges run 'sc stop wscsvc' " << endl;
 	}
 
 	PARSE_RESULT parse_call(mem_attacker::MemAttacker & my_testbed) {
 		string string_command = { 0 };
-		string_command = { 0 };
 		std::cin >> string_command; //std::getline(std::cin >> std::ws, string_command);
 
 		const auto item = g_CommandsList.find(string_command);

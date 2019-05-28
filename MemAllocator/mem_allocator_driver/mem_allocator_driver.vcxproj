@@ -126,10 +126,13 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\utils\zwfile.cpp" />
     <ClCompile Include="allocated_mem_access.cpp" />
     <ClCompile Include="mem_allocator_driver.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\utils\files_structs.h" />
+    <ClInclude Include="..\..\utils\zwfile.h" />
     <ClInclude Include="..\shared\version.h" />
     <ClInclude Include="code_asm.h" />
     <ClInclude Include="allocated_mem_access.h" />

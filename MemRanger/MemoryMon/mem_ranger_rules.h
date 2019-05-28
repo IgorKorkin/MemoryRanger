@@ -14,15 +14,16 @@
 #include "rwe.h"
 
 typedef struct _ALLOCATED_POOL {
-	void*				poolStart;
-	void*				poolEnd;
-}ALLOCATED_POOL, *PALLOCATED_POOL;
+	void*				startAddr;
+	void*				endAddr;
+}ALLOCATED_POOL, *PALLOCATED_POOL, FILEOBJECT, *PFILEOBJECT;
 
 typedef struct _ISOLATED_MEM_ENCLAVE {
 	EptData*	ept;
 	void*		driverStart;
 	void*		driverEnd;
-	std::vector<ALLOCATED_POOL> mem_allocated_list;
+	std::vector<ALLOCATED_POOL> mem_allocated_list; // (Start, End)-addresses of allocated memory pools
+	std::vector<FILEOBJECT> file_objects_list;		// (Start, End)-addresses of created FILE_OBJECTS
 }ISOLATED_MEM_ENCLAVE;
 
 
@@ -73,8 +74,8 @@ public:
 			if (UtilIsInBounds(driverAddress, each_driver.driverStart, each_driver.driverEnd)) {
 				for (auto pool = each_driver.mem_allocated_list.begin(); 
 					pool != each_driver.mem_allocated_list.end(); ++pool){
-					if (allocAddr == pool->poolStart){
-						void* end_addr = pool->poolEnd;
+					if (allocAddr == pool->startAddr){
+						void* end_addr = pool->endAddr;
 						size =
 							reinterpret_cast<SIZE_T>(reinterpret_cast<void*>((reinterpret_cast<ULONG_PTR>(end_addr) -
 								reinterpret_cast<ULONG_PTR>(allocAddr) + 1)));
@@ -87,22 +88,68 @@ public:
 		return size;
 	}
 
-	EptData* get_drivers_ept(void* driverAddr) {
-		for (const auto& each_driver : protected_memory_list) {
-			if (UtilIsInBounds(driverAddr, each_driver.driverStart, each_driver.driverEnd)) {
-				return each_driver.ept;
-				break;
+	EptData* access_to_the_allocated_data(void* accessAddr) {
+		for (const auto& driver : protected_memory_list) {
+			for (const auto& memory : driver.mem_allocated_list) {
+				if (UtilIsInBounds(accessAddr, memory.startAddr, memory.endAddr)) {
+					return driver.ept;
+				}
 			}
 		}
 		return nullptr;
 	}
 
-	EptData* access_to_the_allocated_data(void* accessAddr) {
-		for (const auto& driver : protected_memory_list) {
-			for (const auto& memory : driver.mem_allocated_list) {
-				if (UtilIsInBounds(accessAddr, memory.poolStart, memory.poolEnd)) {
-					return driver.ept;
+	//////////////////////////////////////////////////////////////////////////
+
+	bool add_file_object(void* driverAddr, void* address, SIZE_T size) {
+		for (auto & each_driver : protected_memory_list) {
+			if (UtilIsInBounds(driverAddr, each_driver.driverStart, each_driver.driverEnd)) {
+				const auto end_address =
+					reinterpret_cast<void*>(reinterpret_cast<ULONG_PTR>(address) + size - 1);
+				each_driver.file_objects_list.push_back(FILEOBJECT{ address, end_address });
+				return true;
+			}
+		}
+		return false;
+	}
+
+	SIZE_T del_file_object(void* driverAddress, void* startFileObj) {
+		SIZE_T size = 0;
+		for (auto & each_driver : protected_memory_list) {
+			if (UtilIsInBounds(driverAddress, each_driver.driverStart, each_driver.driverEnd)) {
+				for (auto each_fileobj = each_driver.file_objects_list.begin();
+				each_fileobj != each_driver.file_objects_list.end(); ++each_fileobj) {
+					if (startFileObj == each_fileobj->startAddr) {
+						void* end_addr = each_fileobj->endAddr;
+						size =
+							reinterpret_cast<SIZE_T>(reinterpret_cast<void*>((reinterpret_cast<ULONG_PTR>(end_addr) -
+								reinterpret_cast<ULONG_PTR>(startFileObj) + 1)));
+						each_driver.file_objects_list.erase(each_fileobj);
+						return size;
+					}
 				}
+			}
+		}
+		return size;
+	}
+
+	EptData* access_to_the_file_object(void* accessAddr) {
+		for (const auto& each_driver : protected_memory_list) {
+			for (const auto& each_fileobj : each_driver.file_objects_list) {
+				if (UtilIsInBounds(accessAddr, each_fileobj.startAddr, each_fileobj.endAddr)) {
+					return each_driver.ept;
+				}
+			}
+		}
+		return nullptr;
+	}
+	//////////////////////////////////////////////////////////////////////////
+
+	EptData* get_drivers_ept(void* driverAddr) {
+		for (const auto& each_driver : protected_memory_list) {
+			if (UtilIsInBounds(driverAddr, each_driver.driverStart, each_driver.driverEnd)) {
+				return each_driver.ept;
+				break;
 			}
 		}
 		return nullptr;
