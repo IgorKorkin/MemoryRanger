@@ -1,3 +1,5 @@
+## offtopic
+-->>>>MemoryRanger updates for the BHEU 2019 will be uploaded soon.<<<<--
 # MemoryRanger
 
 MemoryRanger hypervisor moves newly loaded drivers into isolated kernel spaces by using VT-x and EPT. MemoryRanger has been presented at Black Hat Europe 2018 and CDFSL 2019. 
