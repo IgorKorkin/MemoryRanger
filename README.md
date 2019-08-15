@@ -1,5 +1,12 @@
-## off-topic
--->>>>MemoryRanger updates for the BHEU 2019 will be uploaded soon.<<<<--
+## Updated MemoryRanger for the Black Hat Europe 2019 
+<img src="https://github.com/IgorKorkin/MemoryRanger/blob/master/blackhat2019_memoryranger_prevents_token_and_handle_hijacking.png" width="1000" />
+
+* Handle Hijacking: illegal access to exclusive open files via patching handle table entries;
+* Token Hijacking: elevation of process privileges without using token-swapping technique;
+* Updated Memory Ranger can prevent Token Hijacking and Handle Hijacking attacks.
+
+-->>>> Four new demos with updated MemoryRanger for the BHEU 2019 will be uploaded soon.<<<<--
+
 # MemoryRanger
 
 MemoryRanger hypervisor moves newly loaded drivers into isolated kernel spaces by using VT-x and EPT. MemoryRanger has been presented at Black Hat Europe 2018 and CDFSL 2019. 
