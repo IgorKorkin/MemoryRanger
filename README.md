@@ -5,7 +5,7 @@
 * Token Hijacking: elevation of process privileges without using token-swapping technique;
 * Updated Memory Ranger can prevent Token Hijacking and Handle Hijacking attacks.
 
--->>>> Four new demos with updated MemoryRanger for the BHEU 2019 will be uploaded soon.<<<<--
+<i>-->>>> Four new demos with updated MemoryRanger for the BHEU 2019 will be uploaded soon.<<<<--</i>
 
 # MemoryRanger
 
