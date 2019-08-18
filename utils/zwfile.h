@@ -54,7 +54,7 @@ extern "C" namespace zwfile
 	unsigned __int64 strong_write(LPCWSTR lpFileName, LPVOID lpBuffer, DWORD nNumberOfBytesToWrite );
 
 	void zw_create_file(ULONG inBufSz, void* inBuf);
-	void zw_open_file(FileWriter & fwFile, ULONG inBufSz, void* inBuf);
+	bool zw_open_file(FileWriter & fwFile, ULONG inBufSz, void* inBuf);
 	void zw_read_file(FileWriter & fwFile, ULONG inBufSz, void* inBuf);
 	void zw_write_file(FileWriter & fwFile, ULONG inBufSz, void* inBuf);
 }

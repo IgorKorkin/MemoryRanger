@@ -121,20 +121,20 @@ namespace ctl_files {
 		return b_res;
 	}
 
-	bool check_fileobj(void *obj) {
+	bool check_kernel_address(void *obj) {
 		bool b_res = (obj > (void*)0xf0000000'00000000);
 		if (!b_res){
-			wcout << "  The input FILE_OBJECT addr:  \"" << obj << "\"  is wrong, try again!" << endl;
+			wcout << "  The input addr:  \"" << obj << "\"  is wrong, try again!" << endl;
 		}
 		return b_res;
 	}
 
-	bool open_file_by_hijacking(scm_util::SCMUtil & scm_manager, const DWORD ctrlCode) {
+	bool open_file_by_hijacking_fileobj(scm_util::SCMUtil & scm_manager, const DWORD ctrlCode) {
 		bool b_res = false;
 		OPEN_THE_FILE file = { 0 };
 		const TCHAR filename[20] = __TEXT("hijack_file.txt");
 		if (std::cin >> std::hex >> file.target_object && 
-			check_fileobj(file.target_object) &&
+			check_kernel_address(file.target_object) &&
 			set_path(filename, file.file_path)) {
 			b_res = scm_manager.send_ctrl_code(ctrlCode, &file, sizeof OPEN_THE_FILE, NULL, 0, 0);
 			if (file.is_hijacking_ok){
@@ -144,6 +144,25 @@ namespace ctl_files {
 				wcout << "  The target FILE_OBJECT \"" << file.target_object << "\" cannot be accessed." << endl;
 			}
 			print_details(file.status, file.handle, file.object, file.file_path.path_to_file);
+		}
+		return b_res;
+	}
+
+	bool open_file_by_hijacking_filehandle(scm_util::SCMUtil & scm_manager, const DWORD ctrlCode) {
+		bool b_res = false;
+		HIJACKING_HANDLE_TABLE file = { 0 };
+		const TCHAR filename[50] = __TEXT("hijack_file_by_handle_table.txt");
+		if (std::cin >> std::hex >> file.target_file_handle && 
+			check_kernel_address((void*)file.target_file_handle) &&
+			set_path(filename, file.file_hijacker.file_path)) {
+			b_res = scm_manager.send_ctrl_code(ctrlCode, &file, sizeof HIJACKING_HANDLE_TABLE, NULL, 0, 0);
+			if (file.file_hijacker.is_hijacking_ok) {
+				wcout << "  The target  HandleTableEntry  has been patched!" << endl;
+			}
+			else {
+				wcout << "  The target  HandleTableEntry  cannot be patched." << endl;
+			}
+			print_details(file.file_hijacker.status, file.file_hijacker.handle, file.file_hijacker.object, file.file_hijacker.file_path.path_to_file);
 		}
 		return b_res;
 	}

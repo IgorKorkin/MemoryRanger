@@ -30,4 +30,10 @@ typedef struct _READ_THE_FILE {
 	__out	long			status;
 }READ_THE_FILE, WRITE_THE_FILE;
 
+
+typedef struct _HIJACKING_HANDLE_TABLE{
+	OPEN_THE_FILE file_hijacker;
+	__in	void* target_file_handle; // - for illegal access to the opened file
+} HIJACKING_HANDLE_TABLE, *PHIJACKING_HANDLE_TABLE;
+
 #endif // __FILES_STRUCTS__

@@ -127,11 +127,54 @@ _Use_decl_annotations_ bool V2PMap2::refresh(ProcessorData* processor_data) {
 		  old_ept_entry_n->fields.read_access = false;
 		  old_ept_entry_n->fields.write_access = false;
 	  }
+	  else if (RweIsInsideHandleTableRange(map.va)) {
+		  HYPERPLATFORM_COMMON_DBG_BREAK();
+		  old_ept_entry_n->fields.execute_access = false;
+		  old_ept_entry_n->fields.read_access = false;
+		  old_ept_entry_n->fields.write_access = false;
+	  }
 	  else {
 		  old_ept_entry_n->fields.execute_access = true;
 		  old_ept_entry_n->fields.read_access = true;
 		  old_ept_entry_n->fields.write_access = true;
 	  }
+
+	/*token*/  const auto token_ept_entry_n =
+		  EptGetEptPtEntry(processor_data->ept_data_token, map.pa);
+
+	  if (RweIsInsideSystemDriversRange(map.va)) {
+		  token_ept_entry_n->fields.execute_access = true;
+		  token_ept_entry_n->fields.read_access = true;
+		  token_ept_entry_n->fields.write_access = true;
+	  }
+	  else if (RweIsInsideSystemStructsRange(map.va)) {
+		  HYPERPLATFORM_COMMON_DBG_BREAK();
+		  token_ept_entry_n->fields.execute_access = true;
+		  token_ept_entry_n->fields.read_access = true;
+		  token_ept_entry_n->fields.write_access = true;
+	  }
+	  else if (RweIsInsideIsolatedDriversRange(map.va)) {
+		  token_ept_entry_n->fields.execute_access = false;
+		  token_ept_entry_n->fields.read_access = false;
+		  token_ept_entry_n->fields.write_access = false;
+	  }
+	  else if (RweIsInsideMemoryAllocationRange(map.va)) {
+		  token_ept_entry_n->fields.execute_access = false;
+		  token_ept_entry_n->fields.read_access = false;
+		  token_ept_entry_n->fields.write_access = false;
+	  }
+	  else if (RweIsInsideHandleTableRange(map.va)) {
+		  HYPERPLATFORM_COMMON_DBG_BREAK();
+		  token_ept_entry_n->fields.execute_access = false;
+		  token_ept_entry_n->fields.read_access = false;
+		  token_ept_entry_n->fields.write_access = false;
+	  }
+	  else {
+		  token_ept_entry_n->fields.execute_access = true;
+		  token_ept_entry_n->fields.read_access = true;
+		  token_ept_entry_n->fields.write_access = true;
+	  }
+
 
 	  RweRefreshTables(map.pa, map.va);
 

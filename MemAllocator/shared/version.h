@@ -8,10 +8,12 @@
 //   'B' - British version
 //   'R' - Russian version
 
-//#define THIS_VER_IS 'A' 
-//#define THIS_VER_IS 'B' 
-//#define THIS_VER_IS 'R' 
-#define	THIS_VER_IS '$'
+//#define  THIS_VER_IS 'A' 
+//#define  THIS_VER_IS 'B' 
+//#define  THIS_VER_IS 'R' 
+//#define  THIS_VER_IS '$'
+#define THIS_VER_IS 'L' 
+
 
 #if 'A' == THIS_VER_IS
 	#define US_DATA
@@ -25,6 +27,9 @@
 #elif '$' == THIS_VER_IS
 	#define BUDGET
 	#pragma message("Here is \"BUDGET\" version. To change it go to file: " __FILE__)
+#elif 'L' == THIS_VER_IS
+	#define LAB
+	#pragma message("Here is \"LAB\" version. To change it go to file: " __FILE__)
 #else
 	#error The version is undefined, please set THIS_VER_IS: 'A', 'B', or 'R'.
 #endif

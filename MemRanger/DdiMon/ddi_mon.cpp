@@ -179,18 +179,18 @@ static NTSTATUS DdimonpHandleNtQuerySystemInformation(
 
 
 static ShadowHookTarget g_ddimonp_hook_targets[] = {
-	{
-		RTL_CONSTANT_STRING(L"EXALLOCATEPOOLWITHTAG"),
-		DdimonpHandleExAllocatePoolWithTag, nullptr,
-	},
+// 	{
+// 		RTL_CONSTANT_STRING(L"EXALLOCATEPOOLWITHTAG"),
+// 		DdimonpHandleExAllocatePoolWithTag, nullptr,
+// 	},
 // 	{
 // 		RTL_CONSTANT_STRING(L"EXFREEPOOL"), 
 // 		DdimonpHandleExFreePool, nullptr,
 // 	},
-	{
-		RTL_CONSTANT_STRING(L"EXFREEPOOLWITHTAG"),
-		DdimonpHandleExFreePoolWithTag, nullptr,
-	},
+// 	{
+// 		RTL_CONSTANT_STRING(L"EXFREEPOOLWITHTAG"),
+// 		DdimonpHandleExFreePoolWithTag, nullptr,
+// 	},
 	{
 		RTL_CONSTANT_STRING(L"ZWCREATEFILE"),
 		DdimonpHandleZwCreateFile, nullptr,
@@ -414,7 +414,7 @@ _Use_decl_annotations_ static VOID DdimonpHandleExFreePoolWithTag(PVOID p,
 
 // The hook handler for ZwCreateFile(). Logs if ZwCreateFile() is
 // called from where not backed by any image.
-_Use_decl_annotations_ NTSTATUS DdimonpHandleZwCreateFile(_Out_ PHANDLE FileHandle,
+_Use_decl_annotations_ NTSTATUS DdimonpHandleZwCreateFile(_Out_ PHANDLE pFileHandle,
 	_In_ ACCESS_MASK DesiredAccess,
 	_In_ POBJECT_ATTRIBUTES ObjectAttributes,
 	_Out_ PIO_STATUS_BLOCK IoStatusBlock,
@@ -426,7 +426,7 @@ _Use_decl_annotations_ NTSTATUS DdimonpHandleZwCreateFile(_Out_ PHANDLE FileHand
 	_In_reads_bytes_opt_(EaLength) PVOID EaBuffer,
 	_In_ ULONG EaLength) {
 	const auto original = DdimonpFindOrignal(DdimonpHandleZwCreateFile);
-	const auto result = original(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes,
+	const auto result = original(pFileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes,
 		ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength);
 	if (!NT_SUCCESS(result)) {
 		return result;
@@ -438,20 +438,28 @@ _Use_decl_annotations_ NTSTATUS DdimonpHandleZwCreateFile(_Out_ PHANDLE FileHand
 		// An inspected driver has called the func ZwCreateFile() 
 		if (RweIsInsideIsolatedDriversRange(return_addr)) {
 			if (ShareAccess == NULL){
-				PFILE_OBJECT file_object = NULL;
-				if (NT_SUCCESS(ObReferenceObjectByHandle(*FileHandle, FILE_ALL_ACCESS,
-					*IoFileObjectType, KernelMode, (PVOID *)&file_object, NULL))) {
-					if (file_object)   {   ObDereferenceObject(file_object);   }
-
-					HYPERPLATFORM_COMMON_DBG_BREAK();
-
-					if (RweIsInsideIsolatedDrvAddFileObj(return_addr, file_object)) {
-						RweApplyRanges();
+				bool b_res = false;
+				HYPERPLATFORM_COMMON_DBG_BREAK();
+//				PFILE_OBJECT file_object = NULL;
+// 				if (get_file_object(*pFileHandle, file_object)) {
+// 					if (RweIsInsideIsolatedDrvAddFileObj(return_addr, file_object)) {
+// 						b_res = true;
+// 					}
+// 				}
+				void* objheaderbits = NULL;
+				if (get_objheaderbits_in_handle_table_entry(*pFileHandle, objheaderbits)) {
+					
+					//  Actually we do not protect the HANDLE_TABLE_ENTRY completely: 
+					//  --we protect only   ObjectPointerBits,   which takes just 6 bytes (ULONG_PTR ObjectPointerBits : 44; )
+					//    by restricting read and write access to this field.
+					//  --we skip both read and write access attempts to other fields. 
+					if (RweIsInsideIsolatedDrvAddHandleTableEntry(return_addr, objheaderbits)) {
+						b_res = true;
 					}
 				}
+				if (b_res)   {   RweApplyRanges();   }
 			}
 		}
-
 		return result;
 	}
 
@@ -465,20 +473,31 @@ _Use_decl_annotations_ VOID DdimonpHandleZwClose(
 	_In_ HANDLE Handle) {
 	const auto original = DdimonpFindOrignal(DdimonpHandleZwClose);
 
-	
 	auto return_addr = _ReturnAddress();
 	if (UtilPcToFileHeader(return_addr)) {
 		if (RweIsInsideIsolatedDriversRange(return_addr)) {   // Is it inside image?
+			HYPERPLATFORM_COMMON_DBG_BREAK();
 			PFILE_OBJECT file_object = NULL;
-			if (NT_SUCCESS(ObReferenceObjectByHandle(Handle, FILE_ALL_ACCESS,
-				*IoFileObjectType, KernelMode, (PVOID *)&file_object, NULL))) {
-				if (file_object) { ObDereferenceObject(file_object); }
-				HYPERPLATFORM_COMMON_DBG_BREAK();
-				
+			if (get_file_object(Handle, file_object)) {
 				if (RweDelFileObject(return_addr, file_object)) {
 					RweApplyRanges();
 				}
 			}
+			void* objheaderbits = NULL;
+			if (get_objheaderbits_in_handle_table_entry(Handle, objheaderbits)) {
+				if (RweDelHandleTableEntry(return_addr, objheaderbits)) {
+					RweApplyRanges();
+				}
+			}
+// 			if (NT_SUCCESS(ObReferenceObjectByHandle(Handle, FILE_ALL_ACCESS,
+// 				*IoFileObjectType, KernelMode, (PVOID *)&file_object, NULL))) {
+// 				if (file_object) { ObDereferenceObject(file_object); }
+// 				HYPERPLATFORM_COMMON_DBG_BREAK();
+// 				
+// 				if (RweDelFileObject(return_addr, file_object)) {
+// 					RweApplyRanges();
+// 				}
+// 			}
 		}
 	}
 	original(Handle);

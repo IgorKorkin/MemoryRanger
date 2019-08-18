@@ -22,7 +22,7 @@
     <ProjectGuid>{EB20B816-E820-4CCE-85B0-9503D51D5A99}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>mem_allocator_console</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.10586.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
     <ProjectName>mem_allocator_console</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

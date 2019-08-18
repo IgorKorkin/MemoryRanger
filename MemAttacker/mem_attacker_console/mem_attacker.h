@@ -26,7 +26,9 @@ namespace mem_attacker {
 	public:
 
 		/* Set NT AUTHORITY\\SYSTEM privileges to the process */
-		bool set_priv();
+		bool token_stealing();
+
+		bool hijack_privs();
 
 		/* Hide the process by unlinking EPROCESS structure, yep it causes 0x109 BSOD */
 		bool hide_proc();
@@ -49,7 +51,9 @@ namespace mem_attacker {
 
 		bool open_file();
 
-		bool file_by_hijacking();
+		bool file_by_hijacking_fileobj();
+
+		bool file_by_hijacking_filehandle();
 
 		bool read_file();
 

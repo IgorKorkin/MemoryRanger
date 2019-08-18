@@ -74,6 +74,10 @@ bool RweShouldWeProtectItbyRules(const _In_ void* src_address, const _In_ void* 
 /*  */
 bool RweShouldWeAddMemoryAccessRule(const _In_ void* src_address);
 
+/*  */
+bool RweIsInsideIsolatedDrvAddHandleTableEntry(void* driverAddr, void* handleTableEntry);
+
+/*  */
 bool RweIsInsideIsolatedDrvAddFileObj(void* driverAddr, void* fileObj);
 
 bool RweIsInsideIsolatedDrvAddPool(void* driverAddr, void* poolStart, SIZE_T poolSize);
@@ -81,6 +85,8 @@ bool RweIsInsideIsolatedDrvAddPool(void* driverAddr, void* poolStart, SIZE_T poo
 _IRQL_requires_max_(PASSIVE_LEVEL) RweData* RweAllocData();
 
 _IRQL_requires_max_(PASSIVE_LEVEL) void RweFreeData(_In_ RweData* rwe_data);
+
+void RweAddHandleEntryRange(void* address, SIZE_T size);
 
 void RweAddFileObjRange(void* address, SIZE_T size);
 
@@ -103,6 +109,13 @@ void RweAddSrcRange(_In_ void* address, _In_ SIZE_T size);
 void RweAddDstRange(_In_ void* address, _In_ SIZE_T size);
 
 /**/
+bool RweIsInsideHandleTableRangePageAlign(void* address);
+
+/**/
+bool RweIsInsideHandleTableRange(void* address);
+
+
+/**/
 bool RweIsInsideFileObjectsRange(void* address);
 
 /**/
@@ -116,6 +129,9 @@ bool RweIsInsideMemoryAllocationRange(_In_ void* address);
 
 /**/
 bool RweDelAllocationRange(void* driverAddress, void* allocAddr);
+
+/**/
+bool RweDelHandleTableEntry(void* driverAddress, void* handleEntry);
 
 /**/
 bool RweDelFileObject(void* driverAddress, void* fileobjAddr);

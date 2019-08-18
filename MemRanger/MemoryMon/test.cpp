@@ -470,9 +470,56 @@ void add_new_eprocess(_In_ HANDLE ProcessId, PEPROCESS Process) {
 	RweAddEprocess(new_process);
 }
 
+void add_new_token(_In_ HANDLE ProcessId, PEPROCESS Process) {
+	EPROCESS_PID new_process = { 0 };
+	new_process.ProcessId = ProcessId;
+
+	ULONG64 token_addr = *(ULONG64*)( (char*)Process + g_EprocOffsets.Token);
+	token_addr &= ~0xF; // < clear 4 low bits for the _EX_FAST_REF.RefCnt 
+	auto size = 16; // sizeof(TOKEN_SOURCE)
+
+	new_process.mem_token_list.push_back(EPROCESS_FIELD{ (void*)token_addr, size });
+
+	RweAddEprocess(new_process);
+}
+
 bool del_eprocess_structs(_In_ HANDLE ProcessId) {
 	return RweDelEprocess(ProcessId);
 }
+
+
+void add_system_drivers() {
+	static UNICODE_STRING os_drivers[] = {
+		RTL_CONSTANT_STRING(L"*\\NTOSKRNL.EXE"),
+		RTL_CONSTANT_STRING(L"*\\NTKRNLPA.EXE"),
+		RTL_CONSTANT_STRING(L"*\\NTKRNLMP.EXE"),
+		RTL_CONSTANT_STRING(L"*\\NTKRNLAMP.EXE"),
+
+		// For memory allocation:
+		RTL_CONSTANT_STRING(L"*\\WDFLDR.SYS"),
+		RTL_CONSTANT_STRING(L"*\\WDF01000.SYS"),  //  Wdf01000!LibraryRegisterClient
+		RTL_CONSTANT_STRING(L"*\\BAM.SYS"), // Background Activity Moderator Driver (bam) for EPROCESS
+
+		// For read\write operations with FILE_OBJECT
+		RTL_CONSTANT_STRING(L"*\\FLTMGR.SYS"),	//  Microsoft Filesystem Filter Manager
+		RTL_CONSTANT_STRING(L"*\\WCIFS.SYS"),	//  Windows Container Isolation (wcifs) Service, wcifs!WcPreWrite
+		RTL_CONSTANT_STRING(L"*\\LUAFV.SYS"),	//  LUA File Virtualization Filter Driver or UAC File Virtualization, luafv!LuafvPreWrite
+		RTL_CONSTANT_STRING(L"*\\WOF.SYS"),		//  Windows Overlay Filter, Wof!WofAcquireFileSystemRundown
+		RTL_CONSTANT_STRING(L"*\\NTFS.SYS"),	//  New Technology File System , NTFS!NtfsFsdWrite
+
+		RTL_CONSTANT_STRING(L"*\\MEMORYRANGER.SYS")
+	};
+
+	for (auto& driver : os_drivers) {
+		PVOID drv_base = 0;
+		ULONG drv_size = 0;
+		if (UtilpGetAnyModuleHeaderInfo(driver, &drv_base, drv_size)) {
+			HYPERPLATFORM_LOG_INFO("OS driver \"%wZ\" has been added.", driver);
+			RweAddSystemDrvRange(drv_base, drv_size);
+		}
+	}
+}
+
 
 _Use_decl_annotations_ void TestpCreateProcessNotifyRoutineEx(
 	_Inout_ PEPROCESS Process,
@@ -481,7 +528,7 @@ _Use_decl_annotations_ void TestpCreateProcessNotifyRoutineEx(
 ) {
 	UNREFERENCED_PARAMETER(Process); // unreferenced
 	UNREFERENCED_PARAMETER(ProcessId); // unreferenced
-
+	
 	//If CreateInfo is non-NULL, a new process is being created
 	if (CreateInfo != NULL ) { 
 		UNICODE_STRING cmdexe = RTL_CONSTANT_STRING(L"*\\CMD.EXE");
@@ -489,7 +536,9 @@ _Use_decl_annotations_ void TestpCreateProcessNotifyRoutineEx(
 			is_it_from_explorer_exe(CreateInfo->ParentProcessId)) {
 			HYPERPLATFORM_COMMON_DBG_BREAK();
 			if (NT_SUCCESS(CreateInfo->CreationStatus)) {
-				add_new_eprocess(ProcessId, Process);
+				//add_new_eprocess(ProcessId, Process);
+				add_new_token(ProcessId, Process);
+				add_system_drivers();
 				RweApplyRanges();
 			}
 		}

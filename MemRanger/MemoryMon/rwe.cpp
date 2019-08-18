@@ -64,6 +64,7 @@ struct RweSharedData {
   AddressRanges isolated_drivers_range;
   AddressRanges alloc_ranges;
   AddressRanges file_objects_ranges;
+  AddressRanges handle_table_ranges; // < list of HANDLE_TABLE_ENTRY-ies for all drivers
 
   AddressRanges grant_access_list;
 
@@ -194,6 +195,12 @@ void RweRefreshTables(ULONG64 physical_address, void* virtual_address) {
 					ept_entry->fields.write_access = false;
 				}
 			}
+			else if (RweIsInsideHandleTableRange(virtual_address)) {
+				HYPERPLATFORM_COMMON_DBG_BREAK();
+				ept_entry->fields.execute_access = true;
+				ept_entry->fields.read_access = true;
+				ept_entry->fields.write_access = true;
+			}
 			else{
 				// pages are not accessible by default
 				ept_entry->fields.execute_access = false;
@@ -249,11 +256,40 @@ void RweSetProtectedDriverAccessAttribs(void* virtual_address, ULONG64 physical_
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////
 
 
+bool is_this_handle_entry_yours(ISOLATED_MEM_ENCLAVE & driver_enclave, void * handleEntry) {
+	for (const auto & each_handle_entry : driver_enclave.handle_entry_list) {
+		if (UtilIsInBounds(handleEntry, each_handle_entry.startAddr, each_handle_entry.endAddr)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+void RweSetHandleTableAccessAttribs(void* virtual_address, ULONG64 physical_address) {
+	for (auto & each_driver : memory_ranger.protected_memory_list) {
+		auto driver_ept = EptGetEptPtEntry(each_driver.ept, physical_address);
+		if (is_this_handle_entry_yours(each_driver, virtual_address) && 
+			!memory_ranger.two_handle_entries_at_one_page(virtual_address)){
+			driver_ept->fields.execute_access = false /*true*/; // < We need to trap illegal access to driver-related entry
+			driver_ept->fields.read_access = false /*true*/; // < We need to trap illegal access to driver-related entry
+			driver_ept->fields.write_access = false /*true*/; // < We need to trap illegal access to driver-related entry
+		}
+		else {
+			driver_ept->fields.execute_access = false;
+			driver_ept->fields.read_access = false;
+			driver_ept->fields.write_access = false;
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
 
 bool is_this_fileobj_yours(ISOLATED_MEM_ENCLAVE & driver_enclave, void * fileObj) {
-	for (ALLOCATED_POOL & each_file_obj : driver_enclave.file_objects_list) {
+	for (const auto & each_file_obj : driver_enclave.file_objects_list) {
 		if (UtilIsInBounds(fileObj, each_file_obj.startAddr, each_file_obj.endAddr)) {
 			return true;
 		}
@@ -277,9 +313,10 @@ void RweSetFileObjAccessAttribs(void* virtual_address, ULONG64 physical_address)
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////
 
 bool is_this_allocation_yours( ISOLATED_MEM_ENCLAVE & driver_enclave, void * virtual_address) {
-	for (ALLOCATED_POOL & each_pool : driver_enclave.mem_allocated_list) {
+	for (const auto & each_pool : driver_enclave.mem_allocated_list) {
 		if (UtilIsInBounds(virtual_address, each_pool.startAddr, each_pool.endAddr)) {
 			return true;
 		}
@@ -349,6 +386,15 @@ _Use_decl_annotations_ void RweFreeData(RweData* rwe_data) {
 }
 
 /*  */
+_Use_decl_annotations_ void RweAddHandleEntryRange(void* address, SIZE_T size) {
+	const auto end_address =
+		reinterpret_cast<void*>(reinterpret_cast<ULONG_PTR>(address) + size - 1);
+	HYPERPLATFORM_LOG_INFO_SAFE("Add HANDLE_TABLE_ENTRY %p - %p to the list", address, end_address);
+	g_rwep_shared_data.handle_table_ranges.add(address, size);
+	g_rwep_shared_data.v2p_map.add(address, size);
+}
+
+/*  */
 _Use_decl_annotations_ void RweAddFileObjRange(void* address, SIZE_T size) {
 	const auto end_address =
 		reinterpret_cast<void*>(reinterpret_cast<ULONG_PTR>(address) + size - 1);
@@ -373,6 +419,7 @@ _Use_decl_annotations_ void RweAddSystemDrvRange(void* address, SIZE_T size) {
 	g_rwep_shared_data.system_drivers_range.add(address, size);
 	g_rwep_shared_data.v2p_map.add(address, size);
 }
+
 
 _Use_decl_annotations_ void RweAddEprocess(const EPROCESS_PID & proc) {
 	return eprocess_structs.add(proc, RweAddSystemStructsRange);
@@ -408,6 +455,20 @@ _Use_decl_annotations_ bool RweDelAllocationRange(void* driverAddress, void* all
 	return false;
 }
 
+_Use_decl_annotations_ bool RweDelHandleTableEntry(void* driverAddress, void* handleEntry) {
+	auto size = memory_ranger.del_handle_entry(driverAddress, handleEntry);
+	if (size) {
+		g_rwep_shared_data.handle_table_ranges.del(handleEntry, size);
+		g_rwep_shared_data.v2p_map.del(handleEntry, size);
+
+		g_rwep_shared_data.grant_access_list.add(handleEntry, size);
+
+		HYPERPLATFORM_LOG_INFO_SAFE("The HANDLE_TABLE_ENTRY %p by %p driver has been deleted.", handleEntry, driverAddress);
+		return true;
+	}
+	return false;
+}
+
 _Use_decl_annotations_ bool RweDelFileObject(void* driverAddress, void* fileobjAddr) {
 	auto size = memory_ranger.del_file_object(driverAddress, fileobjAddr);
 	if (size) {
@@ -438,6 +499,15 @@ EptData* initialize_ept() {
 		return new_ept;
 	}
 	return nullptr;
+}
+
+bool RweIsInsideIsolatedDrvAddHandleTableEntry(void* driverAddr, void* handleTableEntry) {
+	const SIZE_T handle_entry_zs = (OBJECTPOINTERBITS_SIZE);
+	if (memory_ranger.add_handle_entry(driverAddr, handleTableEntry, handle_entry_zs)) {
+		RweAddHandleEntryRange(handleTableEntry, handle_entry_zs); // < Mark memory region as non-readable and non-writable )
+		return true;
+	}
+	return false;
 }
 
 bool RweIsInsideIsolatedDrvAddFileObj(void* driverAddr, void* fileObj) {
@@ -484,6 +554,16 @@ _Use_decl_annotations_ void RweAddDstRange(void* address, SIZE_T size) {
   HYPERPLATFORM_LOG_INFO_SAFE("Add DST range: %p - %p", address, end_address);
   g_rwep_shared_data.dst_ranges.add(address, size);
   g_rwep_shared_data.v2p_map.add(address, size);
+}
+
+_Use_decl_annotations_ bool RweIsInsideHandleTableRangePageAlign(void* address) {
+	HYPERPLATFORM_PERFORMANCE_MEASURE_THIS_SCOPE();
+	return g_rwep_shared_data.handle_table_ranges.is_in_range_page_align(address);
+}
+
+_Use_decl_annotations_ bool RweIsInsideHandleTableRange(void* address) {
+	HYPERPLATFORM_PERFORMANCE_MEASURE_THIS_SCOPE();
+	return g_rwep_shared_data.handle_table_ranges.is_in_range(address);
 }
 
 /**/
@@ -624,13 +704,26 @@ _Use_decl_annotations_ static void RweSwitchToDefaultMode(
   UtilInveptGlobal();
 }
 
+/*token*/
+_Use_decl_annotations_ static void RweSwitchToTokenEnclave(
+	ProcessorData* processor_data) {
+	processor_data->ept_data = processor_data->ept_data_token;
+	UtilVmWrite64(VmcsField::kEptPointer,
+		EptGetEptPointer(processor_data->ept_data));
+	HYPERPLATFORM_LOG_DEBUG_SAFE("DEFAULT ENCLAVE => TOKEN ENCLAVE");
+	UtilInveptGlobal();
+}
+
+
+
 _Use_decl_annotations_ static void RwepSwitchToProtectedDriverMode(
 	void* fault_va, 
     ProcessorData* processor_data) {
 	EptData * ept = memory_ranger.get_drivers_ept(fault_va);
-	if (!ept){   ept = memory_ranger.access_to_the_allocated_data(fault_va);   }
-	if (!ept){   ept = memory_ranger.access_to_the_file_object(fault_va);   }
-	if (!ept){   HYPERPLATFORM_COMMON_DBG_BREAK();   }
+	if (!ept) {   ept = memory_ranger.access_to_the_allocated_data(fault_va);   }
+	if (!ept) {   ept = memory_ranger.access_to_the_file_object(fault_va);   }
+	if (!ept) {   ept = memory_ranger.access_to_the_handle_table(fault_va);   }
+	if (!ept)   {   HYPERPLATFORM_COMMON_DBG_BREAK();   }
   processor_data->ept_data = ept;
   UtilVmWrite64(VmcsField::kEptPointer,
                 EptGetEptPointer(processor_data->ept_data));
@@ -899,14 +992,27 @@ _Use_decl_annotations_ static void RwepHandleReadWriteViolation(
 		bool access_to_isol_driver_align = RweIsInsideIsolatedDriversRangePageAlign(fault_va);
 		bool access_to_alloc_mem_align = RweIsInsideMemoryAllocationRangePageAlign(fault_va);
 		bool access_to_fileobj_align = RweIsInsideFileObjectsRangePageAlign(fault_va);
-		if (access_to_isol_driver_align || access_to_alloc_mem_align || access_to_fileobj_align) {
+		bool access_to_handle_entry_align = RweIsInsideHandleTableRangePageAlign(fault_va);
+
+		if (access_to_isol_driver_align || access_to_alloc_mem_align || access_to_fileobj_align || access_to_handle_entry_align) {
 			bool access_from_driver = RweIsInsideIsolatedDriversRangePageAlign(guest_ip);
+			
 			if (access_from_driver) {
 				bool access_to_driver = RweIsInsideIsolatedDriversRange(fault_va);
 				bool access_to_pool = RweIsInsideMemoryAllocationRange(fault_va);
 				bool access_to_fileobj = RweIsInsideFileObjectsRange(fault_va);
-				bool is_inside_range = access_to_driver || access_to_pool || access_to_fileobj;
+				bool access_to_handle_entry = RweIsInsideHandleTableRange(fault_va);
+				bool is_inside_range = access_to_driver || access_to_pool || access_to_fileobj || access_to_handle_entry;
 				return RweHandleReadWriteBlockAccessViaMTF(processor_data, guest_ip, fault_va, is_write, is_inside_range);
+			}
+			else {
+				bool access_from_system = RweIsInsideSystemDriversRange(guest_ip);
+				if (access_from_system) {
+					bool access_to_handle_entry = RweIsInsideHandleTableRange(fault_va);
+					bool is_inside_range = access_to_handle_entry;
+					is_inside_range = false;
+					return RweHandleReadWriteBlockAccessViaMTF(processor_data, guest_ip, fault_va, is_write, is_inside_range);
+				}
 			}
 		}
 		bool access_to_eprocess_structs = RweIsInsideSystemStructsRangePageAlign(fault_va);
@@ -929,17 +1035,22 @@ _Use_decl_annotations_ static void RwepHandleReadWriteViolation(
 		bool access_to_isol_driver_align = RweIsInsideIsolatedDriversRangePageAlign(fault_va);
 		bool access_to_alloc_mem_align = RweIsInsideMemoryAllocationRangePageAlign(fault_va);
 		bool access_to_fileobj_align = RweIsInsideFileObjectsRangePageAlign(fault_va);
+		bool access_to_handle_entry_align = RweIsInsideHandleTableRangePageAlign(fault_va);
 
-		if (access_to_isol_driver_align || access_to_alloc_mem_align || access_to_fileobj_align) {
+		bool access_to_token_align = RweIsInsideSystemStructsRangePageAlign(fault_va);
+
+		if (access_to_isol_driver_align || access_to_alloc_mem_align || 
+			access_to_fileobj_align || access_to_handle_entry_align) {
 			bool access_from_system = RweIsInsideSystemDriversRange(guest_ip);
 			if (access_from_system) {
 				bool access_to_alloc_mem = RweIsInsideMemoryAllocationRange(fault_va);
 				bool access_to_fileobj = RweIsInsideFileObjectsRange(fault_va);
-				if (access_to_alloc_mem || access_to_fileobj) {
+				bool access_to_handle_entry = RweIsInsideHandleTableRange(fault_va);
+				if (access_to_alloc_mem || access_to_fileobj || access_to_handle_entry) {
 					RwepSwitchToProtectedDriverMode(fault_va, processor_data);
 				}
 				else {
-					bool is_inside_range = access_to_alloc_mem || access_to_fileobj;
+					bool is_inside_range = access_to_alloc_mem || access_to_fileobj || access_to_handle_entry;
 					RweHandleReadWriteBlockAccessViaMTF(processor_data, guest_ip, fault_va, is_write, is_inside_range);
 				}
 			}
@@ -947,8 +1058,26 @@ _Use_decl_annotations_ static void RwepHandleReadWriteViolation(
 				bool access_to_isol_driver = RweIsInsideIsolatedDriversRange(fault_va);
 				bool access_to_alloc_mem = RweIsInsideMemoryAllocationRange(fault_va);
 				bool access_to_fileobj = RweIsInsideFileObjectsRange(fault_va);
-				bool is_inside_range = access_to_isol_driver || access_to_alloc_mem || access_to_fileobj;
+				bool access_to_handle_entry = RweIsInsideHandleTableRange(fault_va);
+				bool is_inside_range = access_to_isol_driver || access_to_alloc_mem || access_to_fileobj || access_to_handle_entry;
 				RweHandleReadWriteBlockAccessViaMTF(processor_data, guest_ip, fault_va, is_write, is_inside_range);
+			}
+		}
+		else if (access_to_token_align) {
+			bool is_inside_token_range = RweIsInsideSystemStructsRange(fault_va);
+			if (is_inside_token_range) {
+				bool access_from_system = RweIsInsideSystemDriversRange(guest_ip);
+				if (access_from_system) {
+					RweSwitchToTokenEnclave(processor_data);
+				}
+				else {
+					// block access
+					RweHandleReadWriteBlockAccessViaMTF(processor_data, guest_ip, fault_va, is_write, is_inside_token_range);
+				}
+			}
+			else {
+				// allow access
+				RweHandleReadWriteBlockAccessViaMTF(processor_data, guest_ip, fault_va, is_write, is_inside_token_range);
 			}
 		}
 		else {
@@ -1132,12 +1261,41 @@ _Use_decl_annotations_ void RweHandleMonitorTrapFlag(
 	else if (RweIsInsideIsolatedDriversRangePageAlign(fault_va) ||
 		RweIsInsideSystemStructsRangePageAlign(fault_va) ||
 		RweIsInsideMemoryAllocationRangePageAlign(fault_va) ||
-		RweIsInsideFileObjectsRangePageAlign(fault_va)) {
+		RweIsInsideFileObjectsRangePageAlign(fault_va)||
+		RweIsInsideHandleTableRangePageAlign(fault_va)) {
 		RweHandleMonitorTrapFlagAllocatedMemory(processor_data, gp_regs);
 	}
 }
 
 
+
+// Clear access bits for the Default EPT
+// Set access bits only for the EPT with isolated driver and clear bits for all other EPTs
+_Use_decl_annotations_ static bool RwepHandleTablePageCallback(void* va, ULONG64 pa,
+	void* context) {
+	if (!context) {
+		return false;
+	}
+
+	if (!pa) {
+		UNREFERENCED_PARAMETER(va);
+		HYPERPLATFORM_LOG_DEBUG_SAFE("%p is not backed by physical memory.", va);
+		return true;
+	}
+
+	const auto processor_data = reinterpret_cast<ProcessorData*>(context);
+
+	const auto ept_entry_n =
+		EptGetEptPtEntry(processor_data->ept_data_default, pa);
+	ept_entry_n->fields.execute_access = true; // < We grant access to the entry for the default enclave
+	ept_entry_n->fields.read_access = true; // < it helps to prevent too many attempts to the page 
+	ept_entry_n->fields.write_access = true; // < with the protected data
+
+	RweSetHandleTableAccessAttribs(va, pa);
+
+	//HYPERPLATFORM_LOG_DEBUG_SAFE("Alloc NORMAL : S:--E D:RWE O:RWE %p", PAGE_ALIGN(va));
+	return true;
+}
 
 // Clear access bits for the Default EPT
 // Set access bits only for the EPT with isolated driver and clear bits for all other EPTs
@@ -1157,9 +1315,9 @@ _Use_decl_annotations_ static bool RwepFileObjPageCallback(void* va, ULONG64 pa,
 
 	const auto ept_entry_n =
 		EptGetEptPtEntry(processor_data->ept_data_default, pa);
-	ept_entry_n->fields.execute_access = false;
-	ept_entry_n->fields.read_access = false;
-	ept_entry_n->fields.write_access = false;
+	ept_entry_n->fields.execute_access = /*true*/ false;
+	ept_entry_n->fields.read_access = /*true*/ false;
+	ept_entry_n->fields.write_access = /*true*/ false;
 
 	RweSetFileObjAccessAttribs(va, pa);
 
@@ -1237,9 +1395,15 @@ _Use_decl_annotations_ static bool RwepSystemStructsPageCallback(void* va, ULONG
 
 	const auto ept_entry_n =
 		EptGetEptPtEntry(processor_data->ept_data_default, pa);
-	ept_entry_n->fields.execute_access = true;
-	ept_entry_n->fields.read_access = true;
-	ept_entry_n->fields.write_access = true;
+	ept_entry_n->fields.execute_access = false	/*true*/;	/* false for token */
+	ept_entry_n->fields.read_access = false		/*true*/;	/* false for token */
+	ept_entry_n->fields.write_access = false	/*true*/;	/* false for token */
+
+	const auto ept_entry_token =
+		EptGetEptPtEntry(processor_data->ept_data_token, pa);
+	ept_entry_token->fields.execute_access = true;
+	ept_entry_token->fields.read_access = true;
+	ept_entry_token->fields.write_access = true;
 
 	RweSetSystemStructsAccessAttribs(pa);
 
@@ -1268,6 +1432,12 @@ _Use_decl_annotations_ static bool RwepSystemDriversPageCallback(void* va, ULONG
 	ept_entry_n->fields.read_access = true;
 	ept_entry_n->fields.write_access = true;
 	
+	const auto ept_entry_token =
+		EptGetEptPtEntry(processor_data->ept_data_token, pa);
+	ept_entry_token->fields.execute_access = true;
+	ept_entry_token->fields.read_access = true;
+	ept_entry_token->fields.write_access = true;
+
 	RweSetSystemDriversAccessAttribs(pa);
 
 	
@@ -1392,6 +1562,10 @@ _Use_decl_annotations_ void RweVmcallApplyRanges(
 
   g_rwep_shared_data.file_objects_ranges.for_each_page(RwepFileObjPageCallback,
 	  processor_data);
+
+  g_rwep_shared_data.handle_table_ranges.for_each_page(RwepHandleTablePageCallback,
+	  processor_data);
+
 
   if (g_rwep_shared_data.grant_access_list.size()) {
 	  g_rwep_shared_data.grant_access_list.for_each_page(RwepGrantAccessCallback,

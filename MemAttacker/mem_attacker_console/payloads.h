@@ -38,6 +38,13 @@ namespace payloads{
 
 	/* set memory permission for '_funcAddr' memory*/
 	bool set_memory_permission(const DWORD flNewProtect);
+
+	bool set_memory_permission(const DWORD flNewProtect, byte *funcBegin);
+
+	byte* retrive_func_addr_from_jmp(const PAYLOAD_FUNC payloadFuncAsJmpAddr);
+
+
+	bool set_pid_to_func(const DWORD targetPid, byte* funcAddr);
 }
 
 #endif // __PAYLOAD_X64_H__

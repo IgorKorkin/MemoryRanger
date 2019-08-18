@@ -1,5 +1,5 @@
 #include "vulnerable_code.h"
-
+#include <intrin.h>
 
 namespace vulnerable_code {
 
@@ -10,6 +10,11 @@ namespace vulnerable_code {
 	NTSTATUS stack_overflow_stub(IN PVOID UserBuffer, IN SIZE_T Size) {
 		NTSTATUS status = STATUS_UNSUCCESSFUL;
 		DbgPrint(">> run_stack_overflow \r\n");
+		
+		UINT64 CR4_value= __readcr4();
+		const int SMEP_bit = 20;
+		CR4_value &= ~(1UL << SMEP_bit);
+		__writecr4(CR4_value);
 
 		status = run_stack_overflow(UserBuffer, Size);
 
@@ -19,7 +24,7 @@ namespace vulnerable_code {
 	}
 
 	NTSTATUS run_stack_overflow(IN PVOID UserBuffer, IN SIZE_T Size) {
-		ULONG KernelBuffer[BUFFER_SIZE] = { 0 }; /* sizeof = 0x800 bytes */
+		ULONG KernelBuffer[BUFFER_SIZE] = { 0 }; /* sizeof = 0x800 bytes or   4 bytes * 512 entries   */
 
 		RtlCopyMemory((PVOID)KernelBuffer, UserBuffer, Size);
 

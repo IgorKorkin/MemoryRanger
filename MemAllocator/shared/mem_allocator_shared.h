@@ -13,6 +13,10 @@
 	#define		MEM_ALLOCATOR_NAME				L"MemAllocatorRU"
 #elif defined BUDGET
 	#define		MEM_ALLOCATOR_NAME				L"MemAllocatorBudget"
+#elif defined LAB
+	#define		MEM_ALLOCATOR_NAME				L"MemAllocatorLab"
+#else
+	#define		MEM_ALLOCATOR_NAME				L"MemAllocatorDefault"
 #endif
 
 #define		MEM_ALLOCATOR_DETAILS			L"works with files, allocates & accesses the data in the kernel-mode memory"

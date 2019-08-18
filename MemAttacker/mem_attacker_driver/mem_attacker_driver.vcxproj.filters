@@ -42,6 +42,9 @@
     <ClInclude Include="..\..\utils\files_structs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="token_hijacking.h">
+      <Filter>Driver Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="code_asm.asm">
@@ -56,6 +59,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\utils\zwfile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="token_hijacking.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

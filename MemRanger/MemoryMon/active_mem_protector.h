@@ -72,6 +72,7 @@ typedef struct _EPROCESS_FIELD {
 typedef struct _EPROCESS_PID {
 	HANDLE ProcessId;
 	std::vector<_EPROCESS_FIELD> mem_allocated_list;
+	std::vector<_EPROCESS_FIELD> mem_token_list;
 }EPROCESS_PID;
 
 using AddOneStructCallback = void (*)(void* address, SIZE_T size);
@@ -85,6 +86,11 @@ class EprocessStructs {
 			for (auto const & item : proc.mem_allocated_list) {
 				callback(item.start_addr, item.size);
 			}
+
+			/*token*/for (auto const & item : proc.mem_token_list) {
+				callback(item.start_addr, item.size);
+			}
+
 		}
 
 		bool del(const HANDLE ProcessId, DelOneStructCallback callback) {
@@ -96,6 +102,9 @@ class EprocessStructs {
 						HYPERPLATFORM_LOG_INFO_SAFE("The EPROCESS %d (0x%x) is going to be deleted",
 							ProcessId, ProcessId);
 						for (auto const eproc_mem : eproc->mem_allocated_list) {
+							callback(eproc_mem.start_addr, eproc_mem.size);
+						}
+						for (auto const eproc_mem : eproc->mem_token_list) {
 							callback(eproc_mem.start_addr, eproc_mem.size);
 						}
 						protected_eprocess_structs.erase(eproc);

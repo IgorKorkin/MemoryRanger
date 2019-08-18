@@ -18,7 +18,9 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 //	if (check_windows_support::is_ok()) 
 	{
 		memory_allocator::MemAllocator allocator;
-		SetConsoleTitle(L"The boss app"/*MEM_ALLOCATOR_NAME*/);
+		wchar_t buf[MAX_PATH] = {};
+		swprintf_s(buf, MAX_PATH, L"The %s app", MEM_ALLOCATOR_NAME);
+		SetConsoleTitle(buf);
 		eku::setcolor(eku::bright_white, eku::defbackcol);
 		if (allocator.is_ok(MEM_ALLOCATOR_RES_DRIVER, MEM_ALLOCATOR_SYS_FILE, MEM_ALLOCATOR_SERVNAME_APP, MEM_ALLOCATOR_LINKNAME_APP)) 
 		{

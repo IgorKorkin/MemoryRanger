@@ -27,8 +27,11 @@ namespace ctl_files {
 	const char f_open_command[] = "f_open";
 	const char f_open_descript[] = " <file_name> <shared_access>' -- open the <file_name> with <shared_access>:\r\n\t\t\t'r'-read, 'w'-write, 'rw'-read+write, no flag - no shared access";
 	
-	const char f_open_by_hijacking_command[] = "f_open_by_hijacking";
-	const char f_open_by_hijacking_descript[] = " <FILE_OBJECT>' -- access to an opened file with <FILE_OBJECT> by its hijacking";
+	const char f_open_by_hijacking_fileobj_command[] = "f_open_by_hijacking_fileobj";
+	const char f_open_by_hijacking_fileobj_descript[] = " <FILE_OBJECT>' -- access to an opened file with <FILE_OBJECT> by its hijacking";
+
+	const char f_open_by_hijacking_filehandle_command[] = "f_open_by_hijacking_filehandle";
+	const char f_open_by_hijacking_filehandle_descript[] = " <HANDLE>' -- access to an opened file with <HANDLE> by its hijacking";
 
 	const char f_read_command[] = "f_read";
 	const char f_read_descript[] = " <name> <content>' -- read the content of file <name>";
@@ -49,7 +52,9 @@ namespace ctl_files {
 
 	bool close_file(scm_util::SCMUtil & scm_manager, const DWORD ctrlCode);
 
-	bool open_file_by_hijacking(scm_util::SCMUtil & scm_manager, const DWORD ctrlCode);
+	bool open_file_by_hijacking_fileobj(scm_util::SCMUtil & scm_manager, const DWORD ctrlCode);
+
+	bool open_file_by_hijacking_filehandle(scm_util::SCMUtil & scm_manager, const DWORD ctrlCode);
 }
 
 #endif // __CTL_FILES_H__

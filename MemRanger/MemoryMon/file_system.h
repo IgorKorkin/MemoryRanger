@@ -1,45 +1,8 @@
-// Copyright (c) 2015-2016, tandasat. All rights reserved.
-// Use of this source code is governed by a MIT-style license that can be
-// found in the LICENSE file.
-
-/// @file
-/// @brief Declares interfaces to driver functions.
-
-#ifndef MEM_ATTACKER_DRIVER_H_
-#define MEM_ATTACKER_DRIVER_H_
-
-#include "common.h"
-#include "..\shared\mem_attacker_shared.h" // IOCTL-codes
-#include "vulnerable_code.h"
-#include "..\..\utils\zwfile.h"
-#include "token_hijacking.h"
-
-#ifdef _WIN64
-#define KERNEL_HANDLE_FLAG 0xFFFFFFFF80000000ULL
-#else
-#define KERNEL_HANDLE_FLAG 0x80000000
-#endif
-
-#define ObKernelHandleToHandle(Handle)                  \
-    (HANDLE)((ULONG_PTR)(Handle) & ~KERNEL_HANDLE_FLAG)
-
-#define ObMarkHandleAsKernelHandle(Handle)           \
-    (HANDLE)((ULONG_PTR)(Handle) | KERNEL_HANDLE_FLAG)
-
+#pragma once
+#include <fltKernel.h>
+#include "wdm.h"
 
 extern "C" {
-
-	typedef struct _EPROC_OFFSETS {
-		int UniqueProcessId;
-		int ActiveProcessLinks;
-		int Token;
-	}EPROC_OFFSETS, *PEPROC_OFFSETS;
-
-	extern EPROC_OFFSETS g_EprocOffsets;
-
-	extern PSHORT NtBuildNumber;
- 	extern void* /*PHANDLE_TABLE*/ ObpKernelHandleTable; // <- does not work with ExEnumHandleTable()
- 	extern NTKERNELAPI PEPROCESS PsInitialSystemProcess;
 
 #pragma pack (push, 1)
 
@@ -54,7 +17,7 @@ extern "C" {
 		ULONG Flags;						// + 0x02c Flags : Uint4B 
 		EX_PUSH_LOCK HandleContentionEvent;	// 		+ 0x02c StrictFIFO : Pos 0, 1 Bit
 		EX_PUSH_LOCK HandleTableLock;		// 		+ 0x02c EnableHandleExceptions : Pos 1, 1 Bit
-		// More fields here...				//		+ 0x02c Rundown : Pos 2, 1 Bit
+											// More fields here...				//		+ 0x02c Rundown : Pos 2, 1 Bit
 	} HANDLE_TABLE, *PHANDLE_TABLE;			//		+ 0x02c Duplicated : Pos 3, 1 Bit
 											//		+ 0x02c RaiseUMExceptionOnInvalidHandleClose : Pos 4, 1 Bit
 											// + 0x030 HandleContentionEvent : _EX_PUSH_LOCK
@@ -62,6 +25,7 @@ extern "C" {
 											// + 0x040 FreeLists : [1] _HANDLE_TABLE_FREE_LIST
 											// + 0x040 ActualEntry : [32] UChar
 											// + 0x060 DebugInfo : Ptr64 _HANDLE_TRACE_DEBUG_INFO
+
 
 	typedef struct _HANDLE_TABLE_ENTRY_INFO {
 		ULONG AuditMask;				//+ 0x000 AuditMask        : Uint4B
@@ -81,6 +45,7 @@ extern "C" {
 			UINT_PTR                Value;                                          // 0x0000 / 0x0000; 0x0004 / 0x0008 Bytes
 		};
 	} EXHANDLE, *PEXHANDLE;
+
 
 	typedef struct _HANDLE_TABLE_ENTRY // Size=16
 	{
@@ -109,10 +74,10 @@ extern "C" {
 				ULONG NoRightsUpgrade : 1; // Size=4 Offset=8 BitOffset=25 BitCount=1
 				ULONG Spare1 : 6; // Size=4 Offset=8 BitOffset=26 BitCount=6
 			}tag2;
-			ULONG Spare2; // Size=4 Offset=12
 		};
+		//LONG Spare2; // Size=4 Offset=12
 	} HANDLE_TABLE_ENTRY, *PHANDLE_TABLE_ENTRY;
-	
+
 #pragma pack(pop)
 
 // _HANDLE_TABLE_ENTRY
@@ -129,18 +94,12 @@ extern "C" {
 // 
 // Here are the details of ObjectPointerBits:
 //
-
 #define OBJECTPOINTERBITS_SIZE		6	/* <-  ~six bytes (63:20) - 44 bits  */
 #define OBJECTPOINTERBITS_OFFSET	2	/* <-  two bytes from the begging of the PHANDLE_TABLE_ENTRY  */
 #define HANDLE_TABLE_ENTRY_SZ		sizeof(HANDLE_TABLE_ENTRY)
 
 
-
-
-#define EX_ADDITIONAL_INFO_SIGNATURE (ULONG_PTR)(-2)
-
-#define ExpIsValidObjectEntry(Entry) \
-    ( (Entry != NULL) && (Entry->LowValue != 0) && (Entry->HighValue != EX_ADDITIONAL_INFO_SIGNATURE) )
+//////////////////////////////////////////////////////////////////////////
 
 	typedef BOOLEAN(*EX_ENUMERATE_HANDLE_ROUTINE)(
 		IN PHANDLE_TABLE HandleTable,
@@ -158,13 +117,6 @@ extern "C" {
 			OUT PHANDLE Handle
 		);
 
-// 	NTKERNELAPI
-// 		VOID
-// 		ExUnlockHandleTableEntry(
-// 			__inout PHANDLE_TABLE HandleTable,
-// 			__inout PHANDLE_TABLE_ENTRY HandleTableEntry
-// 		);
-
 	// 	NTKERNELAPI PHANDLE_TABLE_ENTRY
 	// 		ExMapHandleToPointer(
 	// 			IN  PHANDLE_TABLE HandleTable,
@@ -180,42 +132,27 @@ extern "C" {
 			IN OUT PVOID WaitBlock
 		);
 
-NTKERNELAPI UCHAR *NTAPI PsGetProcessImageFileName(_In_ PEPROCESS process);
+	//////////////////////////////////////////////////////////////////////////
 
-#define MEM_ATTACKER_LOGGER(format, ...) \
-  DbgPrint("[%ws] ", MEM_ATTACKER_NAME); \
-  DbgPrint((format), __VA_ARGS__); \
-	DbgPrint("\r\n");
-////////////////////////////////////////////////////////////////////////////////
-//
-// macro utilities
-//
 
-////////////////////////////////////////////////////////////////////////////////
-//
-// constants and macros
-//
+#ifdef _WIN64
+#define KERNEL_HANDLE_FLAG 0xFFFFFFFF80000000ULL
+#else
+#define KERNEL_HANDLE_FLAG 0x80000000
+#endif
 
-////////////////////////////////////////////////////////////////////////////////
-//
-// types
-//
+#define ObKernelHandleToHandle(Handle)                  \
+    (HANDLE)((ULONG_PTR)(Handle) & ~KERNEL_HANDLE_FLAG)
 
-////////////////////////////////////////////////////////////////////////////////
-//
-// prototypes
-//
+#define ObMarkHandleAsKernelHandle(Handle)           \
+    (HANDLE)((ULONG_PTR)(Handle) | KERNEL_HANDLE_FLAG)
 
-////////////////////////////////////////////////////////////////////////////////
-//
-// variables
-//
+#define EX_ADDITIONAL_INFO_SIGNATURE (ULONG_PTR)(-2)
 
-////////////////////////////////////////////////////////////////////////////////
-//
-// implementations
-//
+#define ExpIsValidObjectEntry(Entry) \
+    ( (Entry != NULL) && (Entry->LowValue != 0) && (Entry->HighValue != EX_ADDITIONAL_INFO_SIGNATURE) )
 
-}  // extern "C"
+	bool get_file_object(HANDLE pfileHandle, PFILE_OBJECT & pfileObject);
+	bool get_objheaderbits_in_handle_table_entry(HANDLE fileHandle, void* & handle_table_entry);
 
-#endif  // MEM_ATTACKER_DRIVER_H_
+}

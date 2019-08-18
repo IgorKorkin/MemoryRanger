@@ -410,7 +410,8 @@ extern "C"  namespace zwfile
 		}
 	}
 
-	void zw_open_file(FileWriter & fwFile, ULONG inBufSz, void* inBuf) {
+	bool zw_open_file(FileWriter & fwFile, ULONG inBufSz, void* inBuf) {
+		bool b_res = false;
 		if (inBufSz == sizeof OPEN_THE_FILE) {
 			OPEN_THE_FILE *file = (OPEN_THE_FILE*)inBuf;
 			if (file && file->file_path.path_sz && file->file_path.path_to_file) {
@@ -419,12 +420,14 @@ extern "C"  namespace zwfile
 					file->status = fwFile.init(file->file_path.path_to_file,
 						GENERIC_READ | GENERIC_WRITE, FILE_OPEN_IF, file->shared_access);
 					if (NT_SUCCESS(file->status)) {
+						b_res = true;
 						file->handle = fwFile.get_handle();
 						file->object = fwFile.get_object();
 					}
 				}
 			}
 		}
+		return b_res;
 	}
 
 	void zw_read_file(FileWriter & fwFile, ULONG inBufSz, void* inBuf) {

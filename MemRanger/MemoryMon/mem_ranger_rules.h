@@ -12,11 +12,12 @@
 #include "../HyperPlatform/HyperPlatform/ept.h"
 #include "../HyperPlatform/HyperPlatform/util.h"
 #include "rwe.h"
+#include "file_system.h"
 
 typedef struct _ALLOCATED_POOL {
 	void*				startAddr;
 	void*				endAddr;
-}ALLOCATED_POOL, *PALLOCATED_POOL, FILEOBJECT, *PFILEOBJECT;
+}ALLOCATED_POOL, *PALLOCATED_POOL, FILEOBJECT, *PFILEOBJECT, PROTECTED_MEM;
 
 typedef struct _ISOLATED_MEM_ENCLAVE {
 	EptData*	ept;
@@ -24,6 +25,7 @@ typedef struct _ISOLATED_MEM_ENCLAVE {
 	void*		driverEnd;
 	std::vector<ALLOCATED_POOL> mem_allocated_list; // (Start, End)-addresses of allocated memory pools
 	std::vector<FILEOBJECT> file_objects_list;		// (Start, End)-addresses of created FILE_OBJECTS
+	std::vector<PROTECTED_MEM> handle_entry_list;		// (Start, End)-addresses of created HANDLE_TABLE_ENTRY
 }ISOLATED_MEM_ENCLAVE;
 
 
@@ -101,6 +103,52 @@ public:
 
 	//////////////////////////////////////////////////////////////////////////
 
+	bool add_handle_entry(void* driverAddr, void* address, SIZE_T size) {
+		for (auto & each_driver : protected_memory_list) {
+			if (UtilIsInBounds(driverAddr, each_driver.driverStart, each_driver.driverEnd)) {
+				const auto end_address =
+					reinterpret_cast<void*>(reinterpret_cast<ULONG_PTR>(address) + size - 1);
+				each_driver.handle_entry_list.push_back(PROTECTED_MEM{ address, end_address });
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool two_handle_entries_at_one_page(void* handleEntry) {
+		int handle_entries_at_one_page = 0;
+		for (auto & each_driver : protected_memory_list) {
+			for (const auto & each_handle_entry : each_driver.handle_entry_list) {
+				if (UtilIsInBounds(PAGE_ALIGN(handleEntry), PAGE_ALIGN(each_handle_entry.startAddr), PAGE_ALIGN(each_handle_entry.endAddr))) {
+					handle_entries_at_one_page++;
+				}
+			}
+		}
+		return (handle_entries_at_one_page >= 2);
+	}
+
+	SIZE_T del_handle_entry(void* driverAddress, void* startHandleEntry) {
+		SIZE_T size = 0;
+		for (auto & each_driver : protected_memory_list) {
+			if (UtilIsInBounds(driverAddress, each_driver.driverStart, each_driver.driverEnd)) {
+				for (auto each_handle_entry = each_driver.handle_entry_list.begin();
+					each_handle_entry != each_driver.handle_entry_list.end(); ++each_handle_entry) {
+					if (startHandleEntry == each_handle_entry->startAddr) {
+						void* end_addr = each_handle_entry->endAddr;
+						size =
+							reinterpret_cast<SIZE_T>(reinterpret_cast<void*>((reinterpret_cast<ULONG_PTR>(end_addr) -
+								reinterpret_cast<ULONG_PTR>(startHandleEntry) + 1)));
+						each_driver.handle_entry_list.erase(each_handle_entry);
+						return size;
+					}
+				}
+			}
+		}
+		return size;
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+
 	bool add_file_object(void* driverAddr, void* address, SIZE_T size) {
 		for (auto & each_driver : protected_memory_list) {
 			if (UtilIsInBounds(driverAddr, each_driver.driverStart, each_driver.driverEnd)) {
@@ -143,6 +191,18 @@ public:
 		}
 		return nullptr;
 	}
+
+	EptData* access_to_the_handle_table(void* accessAddr) {
+		for (const auto& each_driver : protected_memory_list) {
+			for (const auto& each_handle_entry : each_driver.handle_entry_list) {
+				if (UtilIsInBounds(accessAddr, each_handle_entry.startAddr, each_handle_entry.endAddr)) {
+					return each_driver.ept;
+				}
+			}
+		}
+		return nullptr;
+	}
+
 	//////////////////////////////////////////////////////////////////////////
 
 	EptData* get_drivers_ept(void* driverAddr) {
