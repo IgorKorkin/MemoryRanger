@@ -4,11 +4,14 @@
 * Handle Hijacking: illegal access to exclusive open files via patching handle table entries;
 * Token Hijacking: elevation of process privileges without using token-swapping technique;
 * Updated Memory Ranger can prevent Token Hijacking and Handle Hijacking attacks.
+* Four new demos are below.
 
-The preliminarily demos with Handle Hijacking Attack and its Preventing are here:
+Handle Hijacking Attack and its Preventing are here:
 [![Handle Hijacking Attack](https://img.youtube.com/vi/RPPjb_z9_Eg/mqdefault.jpg)](https://www.youtube.com/watch?v=RPPjb_z9_Eg&index=1&list=PL0Aerbf3kwUIzygUeuxiwReOD9IAc68dF) [![The Prevention of Handle Hijacking](https://img.youtube.com/vi/JtDffduwgHY/mqdefault.jpg)](https://www.youtube.com/watch?v=JtDffduwgHY&index=2&list=PL0Aerbf3kwUIzygUeuxiwReOD9IAc68dF)
 
-<i>-->>>> Two more new demos with Token Hijacking for the BHEU 2019 will be uploaded soon.<<<<--</i>
+Token Hijacking Attack and its Preventing are here:
+
+[![Handle Hijacking Attack](https://img.youtube.com/vi/fkKW4n2oaXQ/mqdefault.jpg)](https://www.youtube.com/watch?v=fkKW4n2oaXQg&index=3&list=PL0Aerbf3kwUIzygUeuxiwReOD9IAc68dF) [![The Prevention of Handle Hijacking](https://img.youtube.com/vi/xAAf-eefuB8/mqdefault.jpg)](https://www.youtube.com/watch?v=xAAf-eefuB8&index=4&list=PL0Aerbf3kwUIzygUeuxiwReOD9IAc68dF)
 
 # MemoryRanger
 
