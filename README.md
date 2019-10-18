@@ -1,4 +1,4 @@
-## Updated MemoryRanger for the Black Hat Europe 2019 
+## Updated MemoryRanger for Windows 1903 
 <img src="https://github.com/IgorKorkin/MemoryRanger/blob/master/blackhat2019_memoryranger_prevents_token_and_handle_hijacking.png" width="1000" />
 
 * Handle Hijacking: illegal access to exclusive open files via patching handle table entries;
