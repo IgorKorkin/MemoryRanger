@@ -3,7 +3,10 @@ Updated MemoryRanger prevents the following new attacks:
 * <b>Hijacking of NTFS structures</b> gains an unthorized access to files opened without shared access by patching Stream Control Block structures; 
 * <b>Handle Hijacking Attack</b> provides illegal access to exclusively open files via patching handle table entries;
 * <b>Token Hijacking Attack</b> is designed to elevate the process privileges without using token-swapping technique;
+
+News:
 * Demos with Handle Hijacking and Token Hijacking as well as their prevention on newest <b>Windows 10 1903</b> are below.
+* Demos with Hijacking of NTFS structures will be soon. 
 * Updated MemoryRanger implements <b>special memory enclave to protect the sensitive kernel data</b>, e.g. Token Structures, from being tampered with all drivers, the scheme is below.
 
 <img src="https://github.com/IgorKorkin/MemoryRanger/blob/master/blackhat2019_memoryranger_prevents_token_and_handle_hijacking.png" width="1000" />
