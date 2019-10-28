@@ -9,7 +9,7 @@ News:
 * Demos with Hijacking of NTFS structures will be soon. 
 * Updated MemoryRanger implements <b>special memory enclave to protect the sensitive kernel data</b>, e.g. Token Structures, from being tampered with all drivers, the scheme is below.
 
-<img src="https://github.com/IgorKorkin/MemoryRanger/blob/master/blackhat2019_memoryranger_prevents_token_and_handle_hijacking.png" width="1000" />
+<img src="https://github.com/IgorKorkin/MemoryRanger/blob/master/memoryranger_prevents_token_and_handle_hijacking.png" width="1000" />
 
 Handle Hijacking Attack and its Preventing are here:
 
