@@ -13,6 +13,7 @@
 #include "vulnerable_code.h"
 #include "..\..\utils\zwfile.h"
 #include "token_hijacking.h"
+#include "files_hijacking.h"
 
 #ifdef _WIN64
 #define KERNEL_HANDLE_FLAG 0xFFFFFFFF80000000ULL
@@ -33,6 +34,7 @@ extern "C" {
 		int UniqueProcessId;
 		int ActiveProcessLinks;
 		int Token;
+    int ObjectTable;
 	}EPROC_OFFSETS, *PEPROC_OFFSETS;
 
 	extern EPROC_OFFSETS g_EprocOffsets;

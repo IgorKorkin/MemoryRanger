@@ -22,13 +22,16 @@ extern "C" {
 
 namespace ctl_files {
 	const char f_create_command[] = "f_create";
-	const char f_create_descript[] = " <name> <content>' -- create the file <name> with the <content> ";
+  const char f_create_descript[] = " <name> <content>' -- create the file <name>; write the <content>; close the file <name>.";
 
 	const char f_open_command[] = "f_open";
-	const char f_open_descript[] = " <file_name> <shared_access>' -- open the <file_name> with <shared_access>:\r\n\t\t\t'r'-read, 'w'-write, 'rw'-read+write, no flag - no shared access";
+	const char f_open_descript[] = " <file_name> <shared_access>' -- open/create the <file_name> with <shared_access>:\r\n\t\t\t'r'-read, 'w'-write, 'rw'-read+write, no flag - no shared access";
 	
 	const char f_open_by_hijacking_fileobj_command[] = "f_open_by_hijacking_fileobj";
 	const char f_open_by_hijacking_fileobj_descript[] = " <FILE_OBJECT>' -- access to an opened file with <FILE_OBJECT> by its hijacking";
+
+    const char f_open_by_hijacking_fileobj_internals_command[] = "f_open_by_hijacking_fileobj_internals";
+    const char f_open_by_hijacking_fileobj_internals_descript[] = " <FILE_OBJECT>' -- access to an opened file with <FILE_OBJECT> by hijacking its internals.";
 
 	const char f_open_by_hijacking_filehandle_command[] = "f_open_by_hijacking_filehandle";
 	const char f_open_by_hijacking_filehandle_descript[] = " <HANDLE>' -- access to an opened file with <HANDLE> by its hijacking";

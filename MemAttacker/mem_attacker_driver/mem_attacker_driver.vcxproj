@@ -112,6 +112,9 @@
       <ControlFlowGuard>false</ControlFlowGuard>
     </ClCompile>
     <Link />
+    <Link>
+      <EntryPointSymbol>DriverEntry</EntryPointSymbol>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -126,6 +129,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\utils\zwfile.cpp" />
+    <ClCompile Include="files_hijacking.cpp" />
     <ClCompile Include="mem_attacker_driver.cpp" />
     <ClCompile Include="token_hijacking.cpp" />
     <ClCompile Include="vulnerable_code.cpp" />
@@ -135,6 +139,7 @@
     <ClInclude Include="..\..\utils\zwfile.h" />
     <ClInclude Include="asm.h" />
     <ClInclude Include="common.h" />
+    <ClInclude Include="files_hijacking.h" />
     <ClInclude Include="mem_attacker_driver.h" />
     <ClInclude Include="token_hijacking.h" />
     <ClInclude Include="vulnerable_code.h" />

@@ -1,11 +1,6 @@
 #include "zwfile.h"
 
-
-void zw_open_file() {
-
-}
-
-extern "C"  namespace zwfile
+extern "C" namespace zwfile
 {
 	NTSTATUS create_directory(PCWSTR IN fullNameDir) {
 		UNICODE_STRING unicode_file_name;
@@ -166,7 +161,9 @@ extern "C"  namespace zwfile
 			FILE_POSITION_INFORMATION file_pos = { 0 }; file_pos.CurrentByteOffset = { 0 };
 			NTSTATUS nt_status = ZwSetInformationFile(m_File, &io_status, &file_pos, sizeof(file_pos), FilePositionInformation);
 			if (NT_SUCCESS(nt_status)) {
+                __debugbreak();
 				nt_status = ZwReadFile(m_File, NULL, NULL, NULL, &io_status, lpBuffer, nNumberOfBytesToRead, NULL, NULL);
+                __debugbreak();
 				if (NT_SUCCESS(nt_status)) {
 					KdPrint(("ZwReadFile() + \n"));
 				}

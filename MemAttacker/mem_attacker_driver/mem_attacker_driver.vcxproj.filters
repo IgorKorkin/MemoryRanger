@@ -42,8 +42,11 @@
     <ClInclude Include="..\..\utils\files_structs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="files_hijacking.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="token_hijacking.h">
-      <Filter>Driver Files</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -62,6 +65,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="token_hijacking.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="files_hijacking.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

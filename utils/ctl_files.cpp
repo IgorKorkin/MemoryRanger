@@ -132,7 +132,7 @@ namespace ctl_files {
 	bool open_file_by_hijacking_fileobj(scm_util::SCMUtil & scm_manager, const DWORD ctrlCode) {
 		bool b_res = false;
 		OPEN_THE_FILE file = { 0 };
-		const TCHAR filename[20] = __TEXT("hijack_file.txt");
+		const TCHAR filename[150] = __TEXT("file_hijacker_for_attack_on_fileobject.txt");
 		if (std::cin >> std::hex >> file.target_object && 
 			check_kernel_address(file.target_object) &&
 			set_path(filename, file.file_path)) {
@@ -151,7 +151,7 @@ namespace ctl_files {
 	bool open_file_by_hijacking_filehandle(scm_util::SCMUtil & scm_manager, const DWORD ctrlCode) {
 		bool b_res = false;
 		HIJACKING_HANDLE_TABLE file = { 0 };
-		const TCHAR filename[50] = __TEXT("hijack_file_by_handle_table.txt");
+		const TCHAR filename[50] = __TEXT("file_hijacker_for_attack_on_handle.txt");
 		if (std::cin >> std::hex >> file.target_file_handle && 
 			check_kernel_address((void*)file.target_file_handle) &&
 			set_path(filename, file.file_hijacker.file_path)) {
@@ -172,6 +172,7 @@ namespace ctl_files {
 		bool b_res =
 			scm_manager.send_ctrl_code(ctrlCode, &file, sizeof READ_THE_FILE, NULL, 0, 0);
 		if (b_res) {
+            file.content[sizeof file.content] = 0;
 			wcout << "  The following data have been read  \"" << file.content << "\"" << endl;
 			print_object_handle(file.handle, file.object);
 		}
