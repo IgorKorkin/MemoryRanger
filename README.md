@@ -13,11 +13,11 @@ News:
 
 Handle Hijacking Attack and its Preventing are here:
 
-[![Handle Hijacking Attack](https://img.youtube.com/vi/lLIR5u8AzAY/mqdefault.jpg)](https://www.youtube.com/embed/lLIR5u8AzAY&vq=hd1440&index=1&list=PL0Aerbf3kwUKsNCeJ7wSG957BrIOweEz_) [![The Prevention of Handle Hijacking](https://img.youtube.com/vi/ZivkK9x-Hew/mqdefault.jpg)](https://www.youtube.com/watch_popup?v=ZivkK9x-Hew&vq=hd1440&index=2&list=PL0Aerbf3kwUKsNCeJ7wSG957BrIOweEz_)
+[![Handle Hijacking Attack](https://img.youtube.com/vi/lLIR5u8AzAY/mqdefault.jpg)](https://www.youtube.com/watch?v=lLIR5u8AzAY&vq=hd1440&index=1&list=PL0Aerbf3kwUKsNCeJ7wSG957BrIOweEz_) [![The Prevention of Handle Hijacking](https://img.youtube.com/vi/ZivkK9x-Hew/mqdefault.jpg)](https://www.youtube.com/watch?v=ZivkK9x-Hew&vq=hd1440&index=2&list=PL0Aerbf3kwUKsNCeJ7wSG957BrIOweEz_)
 
 Token Hijacking Attack and its Preventing are here:
 
-[![Handle Hijacking Attack](https://img.youtube.com/vi/pnzvgGanbtw/mqdefault.jpg)](https://www.youtube.com/watch_popup?v=pnzvgGanbtw&vq=hd1440&index=3&list=PL0Aerbf3kwUKsNCeJ7wSG957BrIOweEz_) [![The Prevention of Handle Hijacking](https://img.youtube.com/vi/mSh2R8WMYz8/mqdefault.jpg)](https://www.youtube.com/watch_popup?v=mSh2R8WMYz8&vq=hd1440&index=4&list=PL0Aerbf3kwUKsNCeJ7wSG957BrIOweEz_)
+[![Handle Hijacking Attack](https://img.youtube.com/vi/pnzvgGanbtw/mqdefault.jpg)](https://www.youtube.com/watch?v=pnzvgGanbtw&vq=hd1440&index=3&list=PL0Aerbf3kwUKsNCeJ7wSG957BrIOweEz_) [![The Prevention of Handle Hijacking](https://img.youtube.com/vi/mSh2R8WMYz8/mqdefault.jpg)](https://www.youtube.com/watch?v=mSh2R8WMYz8&vq=hd1440&index=4&list=PL0Aerbf3kwUKsNCeJ7wSG957BrIOweEz_)
 
 # MemoryRanger
 
