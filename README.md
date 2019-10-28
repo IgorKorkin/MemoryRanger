@@ -1,6 +1,6 @@
 ## Updated MemoryRanger: Hijacking Is Not An Option 
 Updated MemoryRanger prevents the following new attacks:
-* <b>Hijacking of NTFS structures</b> gains an unthorized access to files opened without shared access by patching Stream Control Block structures; 
+* <b>Hijacking of NTFS structures</b> gains an unauthorized access to files opened without shared access by patching Stream Control Block structures; 
 * <b>Handle Hijacking Attack</b> provides illegal access to exclusively open files via patching handle table entries;
 * <b>Token Hijacking Attack</b> is designed to elevate the process privileges without using token-swapping technique;
 
