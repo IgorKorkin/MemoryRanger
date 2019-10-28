@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2016, tandasat. All rights reserved.
+// Copyright (c) 2015-2018, Satoshi Tanda. All rights reserved.
 // Use of this source code is governed by a MIT-style license that can be
 // found in the LICENSE file.
 
@@ -9,10 +9,10 @@
 #include <ntimage.h>
 #define NTSTRSAFE_NO_CB_FUNCTIONS
 #include <ntstrsafe.h>
-#include "../HyperPlatform/HyperPlatform/common.h"
-#include "../HyperPlatform/HyperPlatform/log.h"
-#include "../HyperPlatform/HyperPlatform/util.h"
-#include "../HyperPlatform/HyperPlatform/ept.h"
+#include "../HyperPlatform/common.h"
+#include "../HyperPlatform/log.h"
+#include "../HyperPlatform/util.h"
+#include "../HyperPlatform/ept.h"
 #undef _HAS_EXCEPTIONS
 #define _HAS_EXCEPTIONS 0
 #include <vector>
@@ -42,7 +42,7 @@ struct Page {
   ~Page();
 };
 
-// Contains a single steal thook information
+// Contains a single steal hook information
 struct HookInformation {
   void* patch_address;  // An address where a hook is installed
   void* handler;        // An address of the handler routine
@@ -224,7 +224,7 @@ _Use_decl_annotations_ EXTERN_C NTSTATUS ShDisableHooks() {
 }
 
 // Enables page shadowing for all hooks
-_Use_decl_annotations_ NTSTATUS ShEnablePageShadowing(
+_Use_decl_annotations_ NTSTATUS ShEnablePageShadowingForNewEnclave(
     EptData* ept_data, const SharedShadowHookData* shared_sh_data) {
   //HYPERPLATFORM_COMMON_DBG_BREAK();
 
@@ -377,9 +377,11 @@ _Use_decl_annotations_ EXTERN_C static bool ShpSetupInlineHook(
   if (!original_call) {
     return false;
   }
-
   // Copy original code and embed jump code following original code
-  RtlCopyMemory(original_call, patch_address, patch_size);
+  //RtlCopyMemory(original_call, patch_address, patch_size);
+  for (int i =0 ; i < patch_size ; i++){
+    ((char*)original_call)[i] = ((char*)patch_address)[i];
+  }
 #pragma warning(push)
 #pragma warning(disable : 6386)
   // Buffer overrun while writing to 'reinterpret_cast<UCHAR
@@ -508,7 +510,7 @@ _Use_decl_annotations_ static void ShpEnablePageShadowingForExec(
   ept_pt_entry->fields.write_access = false;
   ept_pt_entry->fields.read_access = false;
 
-  // Only execution is allowed on the adresss. Show the copied page for exec
+  // Only execution is allowed on the address. Show the copied page for exec
   // that has an actual breakpoint to the guest.
   ept_pt_entry->fields.physial_address = UtilPfnFromPa(info.pa_base_for_exec);
 
@@ -572,6 +574,19 @@ _Use_decl_annotations_ static const HookInformation* ShpRestoreLastHookInfo(
 _Use_decl_annotations_ static bool ShpIsShadowHookActive(
     const SharedShadowHookData* shared_sh_data) {
   return !!(shared_sh_data);
+}
+
+// Checks if list of addresses
+_Use_decl_annotations_ bool ShpIsItHookAddress(
+  const SharedShadowHookData* shared_sh_data, const void* address) {
+  bool b_res = false;
+
+  for (auto& info : shared_sh_data->hooks) {
+    if (PAGE_ALIGN(info->patch_address) == PAGE_ALIGN(address)) {
+      b_res = true;
+    }
+  }
+  return b_res;
 }
 
 // Allocates a non-paged, page-aligned page. Issues bug check on failure

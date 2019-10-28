@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2016, tandasat. All rights reserved.
+// Copyright (c) 2015-2018, Satoshi Tanda. All rights reserved.
 // Use of this source code is governed by a MIT-style license that can be
 // found in the LICENSE file.
 
@@ -61,7 +61,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) EXTERN_C NTSTATUS ShEnableHooks();
 _IRQL_requires_max_(PASSIVE_LEVEL) EXTERN_C NTSTATUS ShDisableHooks();
 
 _IRQL_requires_min_(DISPATCH_LEVEL) NTSTATUS
-    ShEnablePageShadowing(_In_ EptData* ept_data,
+    ShEnablePageShadowingForNewEnclave(_In_ EptData* ept_data,
                           _In_ const SharedShadowHookData* shared_sh_data);
 
 _IRQL_requires_min_(DISPATCH_LEVEL) void ShVmCallDisablePageShadowing(
@@ -83,6 +83,11 @@ _IRQL_requires_min_(DISPATCH_LEVEL) void ShHandleEptViolation(
     _In_ ShadowHookData* sh_data,
     _In_ const SharedShadowHookData* shared_sh_data, _In_ EptData* ept_data,
     _In_ void* fault_va);
+
+
+_IRQL_requires_min_(DISPATCH_LEVEL) bool ShpIsItHookAddress(
+  _In_ const SharedShadowHookData* shared_sh_data, 
+  _In_ const void* address);
 
 ////////////////////////////////////////////////////////////////////////////////
 //
