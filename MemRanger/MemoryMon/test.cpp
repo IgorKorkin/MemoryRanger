@@ -7,13 +7,13 @@
 
 #include "test.h"
 #include <intrin.h>
-#include "../HyperPlatform/HyperPlatform/common.h"
-#include "../HyperPlatform/HyperPlatform/log.h"
-#include "../HyperPlatform/HyperPlatform/util.h"
+#include "../HyperPlatform/common.h"
+#include "../HyperPlatform/log.h"
+#include "../HyperPlatform/util.h"
 #include "rwe.h"
 #include "test_util.h"
 #include "mem_trace.h"
-#include "../HyperPlatform/HyperPlatform/driver.h"
+#include "../HyperPlatform/driver.h" // < 
 
 #pragma warning(disable : 4505)
 
@@ -67,12 +67,17 @@ _IRQL_requires_max_(PASSIVE_LEVEL) static void TestpLoadImageNotifyRoutine(
     _In_opt_ PUNICODE_STRING full_image_name, _In_ HANDLE process_id,
     _In_ PIMAGE_INFO image_info);
 
+_IRQL_requires_max_(PASSIVE_LEVEL) static bool TestpIsThisProcessLaunchedByExplorer(HANDLE ProcessId);
+
+_IRQL_requires_max_(PASSIVE_LEVEL) static void TextpAddNewProcessToken(_In_ HANDLE ProcessId, PEPROCESS Process);
+
+_IRQL_requires_max_(PASSIVE_LEVEL) static bool TextpDelEprocessStructs(_In_ HANDLE ProcessId);
+
 _IRQL_requires_max_(PASSIVE_LEVEL) static void TestpCreateProcessNotifyRoutineEx(
-	_Inout_ PEPROCESS Process,
-	_In_ HANDLE ProcessId,
-	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo
-	);
-;
+    _Inout_ PEPROCESS Process,
+    _In_ HANDLE ProcessId,
+    _Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo
+);
 
 #if defined(ALLOC_PRAGMA)
 #pragma alloc_text(INIT, TestInitialization)
@@ -80,7 +85,16 @@ _IRQL_requires_max_(PASSIVE_LEVEL) static void TestpCreateProcessNotifyRoutineEx
 #pragma alloc_text(INIT, TestpForEachDriver)
 #pragma alloc_text(INIT, TestpForEachDriverCallback)
 #pragma alloc_text(PAGE, TestTermination)
+
+#pragma alloc_text(PAGE, TestpAddOSInternalDrivers)
 #pragma alloc_text(PAGE, TestpLoadImageNotifyRoutine)
+
+#pragma alloc_text(PAGE, TestpIsThisProcessLaunchedByExplorer)
+#pragma alloc_text(PAGE, TextpAddNewProcessToken)
+#pragma alloc_text(PAGE, TextpDelEprocessStructs)
+#pragma alloc_text(PAGE, TestpCreateProcessNotifyRoutineEx)
+
+
 
 // Locate TestpRwe1 on a NonPagable code section outside of the .text section
 // and TestpRwe2 on Pagable code section outside of the PAGE section. Note that
@@ -110,17 +124,17 @@ _Use_decl_annotations_ NTSTATUS TestInitialization() {
 
   status = PsSetCreateProcessNotifyRoutineEx(TestpCreateProcessNotifyRoutineEx, FALSE);
   if (!NT_SUCCESS(status)) {
-	  return status;
+    return status;
   }
+
 
   return status;
 }
-
 _Use_decl_annotations_ void TestTermination() {
   PAGED_CODE();
 
-  PsRemoveLoadImageNotifyRoutine(TestpLoadImageNotifyRoutine);
   PsSetCreateProcessNotifyRoutineEx(TestpCreateProcessNotifyRoutineEx, TRUE);
+  PsRemoveLoadImageNotifyRoutine(TestpLoadImageNotifyRoutine);
 }
 
 // Runs a set of tests for MemoryMonRWE
@@ -129,15 +143,7 @@ _Use_decl_annotations_ void TestRwe() {
 
   //HYPERPLATFORM_COMMON_DBG_BREAK();
 
-  // Initialize a fake page filled with zero for read protect
-  g_rwe_zero_page = ExAllocatePoolWithTag(NonPagedPool, PAGE_SIZE,
-                                          kHyperPlatformCommonPoolTag);
-  if (!g_rwe_zero_page) {
-    return;
-  }
-  RtlSecureZeroMemory(g_rwe_zero_page, PAGE_SIZE);
-
-  if (false /*MemTraceIsEnabled()*/) {
+  if (MemTraceIsEnabled()) {
     TestpForEachDriver(TestpForEachDriverCallback, nullptr);
     RweApplyRanges();
     HYPERPLATFORM_COMMON_DBG_BREAK();
@@ -145,21 +151,30 @@ _Use_decl_annotations_ void TestRwe() {
     return;
   }
 
-  //RweAddDstRange((void*)0xFFFF800000000000, (size_t)(0xFFFFFFFFFFFFFFFF - 0xFFFF800000000000) );
+  // Initialize a fake page filled with zero for read protect
+  g_rwe_zero_page = ExAllocatePoolWithTag(NonPagedPool, PAGE_SIZE,
+                                          kHyperPlatformCommonPoolTag);
+  if (!g_rwe_zero_page) {
+    return;
+  }
+  RtlZeroMemory(g_rwe_zero_page, PAGE_SIZE);
 
-  //RweAddDstRange((void*)0xFFFF800000000000, (size_t)( 1024 * 1024 * 1024) );
-  
-//   PsSetCreateProcessNotifyRoutine
-// 	  PsSetCreateProcessNotifyRoutineEx
-// 	  PsSetCreateThreadNotifyRoutine
-// 	  PsRemoveCreateThreadNotifyRoutine
-// 	  PsSetLoadImageNotifyRoutine
-// 	  PsRemoveLoadImageNotifyRoutine
-// 	  PsSetCreateProcessNotifyRoutine
-// 	  ZwNotifyChangeKey
-  
+  // Protect HalDispatchTable[1] from being written
+  HYPERPLATFORM_LOG_INFO("Write Protect: %p : hal!HalDispatchTable[1]",
+                         &HalQuerySystemInformation);
+  RweAddDstRange(&HalQuerySystemInformation, sizeof(void*));
 
-//  RweApplyRanges();
+  // Protect PoolBigPageTableSize from being read
+  HYPERPLATFORM_LOG_INFO("Read  Protect: %p : nt!PoolBigPageTableSize",
+                         kRwePoolBigPageTableSizeAddress);
+  RweAddDstRange(kRwePoolBigPageTableSizeAddress, sizeof(void*));
+
+  // Protect PsInitialSystemProcess from being read
+  HYPERPLATFORM_LOG_INFO("Read  Protect: %p : nt!PsInitialSystemProcess 0x%I64X",
+    PsInitialSystemProcess, *(PULONG64)PsInitialSystemProcess );
+  RweAddDstRange(PsInitialSystemProcess, sizeof(void*));
+
+  RweApplyRanges();
 
 #if 0
 
@@ -323,58 +338,42 @@ _Use_decl_annotations_ static bool TestpForEachDriverCallback(
 
   const auto name = reinterpret_cast<const char*>(module.FullPathName) +
                     module.OffsetToFileName;
-  name;
-//   if (MemTraceIsTargetSrcAddress(name)) {
-//     RweAddSrcRange(module.ImageBase, module.ImageSize);
-//   }
+  if (MemTraceIsTargetSrcAddress(name)) {
+    RweAddSrcRange(module.ImageBase, module.ImageSize);
+  }
   return true;
 }
 
-//////////////////////////////////////////////////////////////////////////
+void TestpAddOSInternalDrivers() {
+  static UNICODE_STRING os_drivers[] = {
+    RTL_CONSTANT_STRING(L"*\\NTOSKRNL.EXE"),
+    RTL_CONSTANT_STRING(L"*\\NTKRNLPA.EXE"),
+    RTL_CONSTANT_STRING(L"*\\NTKRNLMP.EXE"),
+    RTL_CONSTANT_STRING(L"*\\NTKRNLAMP.EXE"),
 
-void add_rule(void* drvStartAddr, unsigned __int64 drvSize, void* allocStartAddr, unsigned __int64 allocSize) {
-	MEMORY_ACCESS_RULE mem_pol = { 0 };
-	mem_pol.drvStartAddr = drvStartAddr;
-	mem_pol.drvSize = drvSize;
-	mem_pol.allocStartAddr = allocStartAddr;
-	mem_pol.allocSize = allocSize;
-	mem_pol.is_overwritable = 0;
-	mem_pol.is_readable = 0;
-	RweAddMemoryAccessRule(mem_pol);
-	RweAddAllocRange(mem_pol.allocStartAddr, mem_pol.allocSize);
-}
+    // For memory allocation:
+    RTL_CONSTANT_STRING(L"*\\WDFLDR.SYS"),
+    RTL_CONSTANT_STRING(L"*\\WDF01000.SYS"),  //  Wdf01000!LibraryRegisterClient
+    RTL_CONSTANT_STRING(L"*\\BAM.SYS"), // Background Activity Moderator Driver (bam) for EPROCESS
 
-NTKERNELAPI UCHAR *NTAPI PsGetProcessImageFileName(_In_ PEPROCESS process);
+                                        // For read\write operations with FILE_OBJECT
+                                        RTL_CONSTANT_STRING(L"*\\FLTMGR.SYS"),	//  Microsoft Filesystem Filter Manager
+                                        RTL_CONSTANT_STRING(L"*\\WCIFS.SYS"),	//  Windows Container Isolation (wcifs) Service, wcifs!WcPreWrite
+                                        RTL_CONSTANT_STRING(L"*\\LUAFV.SYS"),	//  LUA File Virtualization Filter Driver or UAC File Virtualization, luafv!LuafvPreWrite
+                                        RTL_CONSTANT_STRING(L"*\\WOF.SYS"),		//  Windows Overlay Filter, Wof!WofAcquireFileSystemRundown
+                                        RTL_CONSTANT_STRING(L"*\\NTFS.SYS"),	//  New Technology File System , NTFS!NtfsFsdWrite
 
-bool is_it_cmd_exe(HANDLE ProcessId, _Outptr_ PEPROCESS & Process) {
-	bool b_res = false;
-	if (NT_SUCCESS(PsLookupProcessByProcessId(ProcessId, &Process))) {
-		PCHAR processName = (PCHAR)PsGetProcessImageFileName(Process);
-		CHAR cmdexe_name[] = "cmd.exe";
-		size_t len = sizeof(cmdexe_name) - 1;
-		b_res = (len == RtlCompareMemory(cmdexe_name, processName, len));
+                                        RTL_CONSTANT_STRING(L"*\\MEMORYRANGER.SYS")
+  };
 
-		if (Process) {
-			ObDereferenceObject(Process);
-		}
-	}
-	return b_res;
-}
-
-bool is_it_from_explorer_exe(HANDLE ProcessId) {
-	bool b_res = false;
-	PEPROCESS Process = NULL;
-	if (NT_SUCCESS(PsLookupProcessByProcessId(ProcessId, &Process))) {
-		PCHAR processName = (PCHAR)PsGetProcessImageFileName(Process);
-		CHAR explorerexe_name[] = "explorer.exe";
-		size_t len = sizeof(explorerexe_name) - 1;
-		b_res = (len == RtlCompareMemory(explorerexe_name, processName, len));
-
-		if (Process) {
-			ObDereferenceObject(Process);
-		}
-	}
-	return b_res;
+  for (auto& driver : os_drivers) {
+    PVOID drv_base = 0;
+    ULONG drv_size = 0;
+    if (UtilpGetAnyModuleHeaderInfo(driver, &drv_base, drv_size)) {
+      HYPERPLATFORM_LOG_INFO("OS driver \"%wZ\" has been added.", driver);
+      RweAddOneOSInternalDriverRange(drv_base, drv_size);
+    }
+  }
 }
 
 _Use_decl_annotations_ static void TestpLoadImageNotifyRoutine(
@@ -391,9 +390,9 @@ _Use_decl_annotations_ static void TestpLoadImageNotifyRoutine(
   HYPERPLATFORM_LOG_DEBUG("New driver: %wZ", full_image_name);
 
   static UNICODE_STRING kTargetDriverExpressions[] = {
-	  RTL_CONSTANT_STRING(L"*\\MEMALLOCATOR*.SYS"),
-	  RTL_CONSTANT_STRING(L"*\\MEMATTACKER*.SYS"),
-	  
+      RTL_CONSTANT_STRING(L"*\\MEMALLOCATOR*.SYS"),
+      RTL_CONSTANT_STRING(L"*\\MEMATTACKER*.SYS"),
+
       RTL_CONSTANT_STRING(L"*\\NOIMAGE.SYS"),
       RTL_CONSTANT_STRING(L"*\\UNLINKED.SYS"),
       RTL_CONSTANT_STRING(L"*\\NGS*.SYS"),
@@ -405,153 +404,94 @@ _Use_decl_annotations_ static void TestpLoadImageNotifyRoutine(
       continue;
     }
 
-	HYPERPLATFORM_COMMON_DBG_BREAK();
-	
-	PVOID protected_drv_base = image_info->ImageBase;
-	SIZE_T protected_drv_size = image_info->ImageSize;
-	
-	HYPERPLATFORM_LOG_INFO("The isolated driver \"%wZ\" is loaded: %I64X-%I64X", 
-		expression,
-		protected_drv_base, 
-		(char*)protected_drv_base + protected_drv_size);
+    HYPERPLATFORM_COMMON_DBG_BREAK();
 
-	RweAddIsolatedEnclave(protected_drv_base, protected_drv_size);
-	
-	static UNICODE_STRING os_drivers[] = {
-		RTL_CONSTANT_STRING(L"*\\NTOSKRNL.EXE"),
-		RTL_CONSTANT_STRING(L"*\\NTKRNLPA.EXE"),
-		RTL_CONSTANT_STRING(L"*\\NTKRNLMP.EXE"),
-		RTL_CONSTANT_STRING(L"*\\NTKRNLAMP.EXE"),
+    PVOID protected_drv_base = image_info->ImageBase;
+    SIZE_T protected_drv_size = image_info->ImageSize;
 
-		// For memory allocation:
-		RTL_CONSTANT_STRING(L"*\\WDFLDR.SYS"),
-		RTL_CONSTANT_STRING(L"*\\WDF01000.SYS"),  //  Wdf01000!LibraryRegisterClient
-		RTL_CONSTANT_STRING(L"*\\BAM.SYS"), // Background Activity Moderator Driver (bam) for EPROCESS
+    HYPERPLATFORM_LOG_INFO("A new driver \"%wZ\" is loaded: %I64X-%I64X \r\n", 
+      full_image_name,
+      protected_drv_base,
+      (char*)protected_drv_base + protected_drv_size);
+    HYPERPLATFORM_LOG_INFO("Let's isolate it! \r\n");
+    
+    HYPERPLATFORM_LOG_INFO("Untrusted driver is being loaded. Add an isolated enclave for it! ");
+    HYPERPLATFORM_LOG_INFO("Name: %wZ", full_image_name);
+    //RweAddSrcRange(image_info->ImageBase, image_info->ImageSize);
 
-		// For read\write operations with FILE_OBJECT
-		RTL_CONSTANT_STRING(L"*\\FLTMGR.SYS"),	//  Microsoft Filesystem Filter Manager
-		RTL_CONSTANT_STRING(L"*\\WCIFS.SYS"),	//  Windows Container Isolation (wcifs) Service, wcifs!WcPreWrite
-		RTL_CONSTANT_STRING(L"*\\LUAFV.SYS"),	//  LUA File Virtualization Filter Driver or UAC File Virtualization, luafv!LuafvPreWrite
-		RTL_CONSTANT_STRING(L"*\\WOF.SYS"),		//  Windows Overlay Filter, Wof!WofAcquireFileSystemRundown
-		RTL_CONSTANT_STRING(L"*\\NTFS.SYS"),	//  New Technology File System , NTFS!NtfsFsdWrite
-
-		RTL_CONSTANT_STRING(L"*\\MEMORYRANGER.SYS")
-	};
-
-	for (auto& driver : os_drivers) {
-		PVOID drv_base = 0;
-		ULONG drv_size = 0;
-		if (UtilpGetAnyModuleHeaderInfo(driver, &drv_base, drv_size)) {
-			HYPERPLATFORM_LOG_INFO("OS driver \"%wZ\" has been added.", driver);
-			RweAddSystemDrvRange(drv_base, drv_size);
-		}
-	}
-
-	RweApplyRanges();
-
+    EptData *new_ept = RweAddIsolatedEnclave(protected_drv_base, protected_drv_size);
+    if (new_ept) {
+        ShEnablePageShadowingForNewEnclave(new_ept);
+        RweApplyRanges();
+    } 
     break;
   }
 }
 
-
-void add_new_eprocess(_In_ HANDLE ProcessId, PEPROCESS Process) {
-	EPROCESS_PID new_process = { 0 };
-	new_process.ProcessId = ProcessId;
-
-	auto start_addr = (char*)Process + g_EprocOffsets.Token;
-	auto size = g_EprocOffsets.TokenSize;
-	new_process.mem_allocated_list.push_back(EPROCESS_FIELD{ start_addr, size });
-
-	start_addr = (char*)Process + g_EprocOffsets.ActiveProcessLinks;
-	size = g_EprocOffsets.ActiveProcessLinksSize;
-
-	new_process.mem_allocated_list.push_back(EPROCESS_FIELD{ start_addr, size });
-
-	RweAddEprocess(new_process);
-}
-
-void add_new_token(_In_ HANDLE ProcessId, PEPROCESS Process) {
-	EPROCESS_PID new_process = { 0 };
-	new_process.ProcessId = ProcessId;
-
-	ULONG64 token_addr = *(ULONG64*)( (char*)Process + g_EprocOffsets.Token);
-	token_addr &= ~0xF; // < clear 4 low bits for the _EX_FAST_REF.RefCnt 
-	auto size = 16; // sizeof(TOKEN_SOURCE)
-
-	new_process.mem_token_list.push_back(EPROCESS_FIELD{ (void*)token_addr, size });
-
-	RweAddEprocess(new_process);
-}
-
-bool del_eprocess_structs(_In_ HANDLE ProcessId) {
-	return RweDelEprocess(ProcessId);
-}
-
-
-void add_system_drivers() {
-	static UNICODE_STRING os_drivers[] = {
-		RTL_CONSTANT_STRING(L"*\\NTOSKRNL.EXE"),
-		RTL_CONSTANT_STRING(L"*\\NTKRNLPA.EXE"),
-		RTL_CONSTANT_STRING(L"*\\NTKRNLMP.EXE"),
-		RTL_CONSTANT_STRING(L"*\\NTKRNLAMP.EXE"),
-
-		// For memory allocation:
-		RTL_CONSTANT_STRING(L"*\\WDFLDR.SYS"),
-		RTL_CONSTANT_STRING(L"*\\WDF01000.SYS"),  //  Wdf01000!LibraryRegisterClient
-		RTL_CONSTANT_STRING(L"*\\BAM.SYS"), // Background Activity Moderator Driver (bam) for EPROCESS
-
-		// For read\write operations with FILE_OBJECT
-		RTL_CONSTANT_STRING(L"*\\FLTMGR.SYS"),	//  Microsoft Filesystem Filter Manager
-		RTL_CONSTANT_STRING(L"*\\WCIFS.SYS"),	//  Windows Container Isolation (wcifs) Service, wcifs!WcPreWrite
-		RTL_CONSTANT_STRING(L"*\\LUAFV.SYS"),	//  LUA File Virtualization Filter Driver or UAC File Virtualization, luafv!LuafvPreWrite
-		RTL_CONSTANT_STRING(L"*\\WOF.SYS"),		//  Windows Overlay Filter, Wof!WofAcquireFileSystemRundown
-		RTL_CONSTANT_STRING(L"*\\NTFS.SYS"),	//  New Technology File System , NTFS!NtfsFsdWrite
-
-		RTL_CONSTANT_STRING(L"*\\MEMORYRANGER.SYS")
-	};
-
-	for (auto& driver : os_drivers) {
-		PVOID drv_base = 0;
-		ULONG drv_size = 0;
-		if (UtilpGetAnyModuleHeaderInfo(driver, &drv_base, drv_size)) {
-			HYPERPLATFORM_LOG_INFO("OS driver \"%wZ\" has been added.", driver);
-			RweAddSystemDrvRange(drv_base, drv_size);
-		}
-	}
-}
-
-
-_Use_decl_annotations_ void TestpCreateProcessNotifyRoutineEx(
-	_Inout_ PEPROCESS Process,
-	_In_ HANDLE ProcessId,
-	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo
-) {
-	UNREFERENCED_PARAMETER(Process); // unreferenced
-	UNREFERENCED_PARAMETER(ProcessId); // unreferenced
-	
-	//If CreateInfo is non-NULL, a new process is being created
-	if (CreateInfo != NULL ) { 
-		UNICODE_STRING cmdexe = RTL_CONSTANT_STRING(L"*\\CMD.EXE");
-		if (FsRtlIsNameInExpression(&cmdexe, (PUNICODE_STRING)CreateInfo->ImageFileName, TRUE, nullptr) &&
-			is_it_from_explorer_exe(CreateInfo->ParentProcessId)) {
-			HYPERPLATFORM_COMMON_DBG_BREAK();
-			if (NT_SUCCESS(CreateInfo->CreationStatus)) {
-				//add_new_eprocess(ProcessId, Process);
-				add_new_token(ProcessId, Process);
-				add_system_drivers();
-				RweApplyRanges();
-			}
-		}
-	}
-	// If CreateInfo is NULL, the specified process is exiting.
-	else if (del_eprocess_structs(ProcessId)) {
-			RweApplyRanges();
-	}
-}
-
+//////////////////////////////////////////////////////////////////////////
 
 NTKERNELAPI UCHAR *NTAPI PsGetProcessImageFileName(_In_ PEPROCESS process);
 
-}  // extern "C"
+bool TestpIsThisProcessLaunchedByExplorer(HANDLE ProcessId) {
+    bool b_res = false;
+    PEPROCESS Process = NULL;
+    if (NT_SUCCESS(PsLookupProcessByProcessId(ProcessId, &Process))) {
+        PCHAR processName = (PCHAR)PsGetProcessImageFileName(Process);
+        CHAR explorerexe_name[] = "explorer.exe";
+        size_t len = sizeof(explorerexe_name) - 1;
+        b_res = (len == RtlCompareMemory(explorerexe_name, processName, len));
 
-PVOID nt_drv_base = 0;
+        if (Process) {
+            ObDereferenceObject(Process);
+        }
+    }
+    return b_res;
+}
+
+void TextpAddNewProcessToken(_In_ HANDLE ProcessId, PEPROCESS Process) {
+    EPROCESS_PID new_process = { 0 };
+    new_process.ProcessId = ProcessId;
+
+    ULONG64 token_addr = *(ULONG64*)((char*)Process + g_EprocOffsets.Token);
+    token_addr &= ~0xF; // < clear 4 low bits for the _EX_FAST_REF.RefCnt 
+    auto size = 16; // sizeof(TOKEN_SOURCE)
+
+    new_process.mem_token_list.push_back(EPROCESS_FIELD{ (void*)token_addr, size });
+
+    RweAddEprocess(new_process);
+}
+
+bool TextpDelEprocessStructs(_In_ HANDLE ProcessId) {
+    return RweDelEprocess(ProcessId);
+}
+
+_Use_decl_annotations_ void TestpCreateProcessNotifyRoutineEx(
+    _Inout_ PEPROCESS Process,
+    _In_ HANDLE ProcessId,
+    _Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo
+) {
+    UNREFERENCED_PARAMETER(Process); // unreferenced
+    UNREFERENCED_PARAMETER(ProcessId); // unreferenced
+
+                                       //If CreateInfo is non-NULL, a new process is being created
+    if (CreateInfo != NULL) {
+        UNICODE_STRING cmdexe = RTL_CONSTANT_STRING(L"*\\CMD.EXE");
+        if (FsRtlIsNameInExpression(&cmdexe, (PUNICODE_STRING)CreateInfo->ImageFileName, TRUE, nullptr) &&
+            TestpIsThisProcessLaunchedByExplorer(CreateInfo->ParentProcessId)) {
+            HYPERPLATFORM_COMMON_DBG_BREAK();
+            if (NT_SUCCESS(CreateInfo->CreationStatus)) {
+                //add_new_eprocess(ProcessId, Process);
+                TextpAddNewProcessToken(ProcessId, Process);
+                RweApplyRanges();
+            }
+        }
+    }
+    // If CreateInfo is NULL, the specified process is exiting.
+    else if (TextpDelEprocessStructs(ProcessId)) {
+        RweApplyRanges();
+    }
+}
+
+
+
+}  // extern "C"

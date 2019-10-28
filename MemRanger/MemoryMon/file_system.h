@@ -1,6 +1,7 @@
 #pragma once
 #include <fltKernel.h>
 #include "wdm.h"
+#include "../HyperPlatform/driver.h"
 
 extern "C" {
 

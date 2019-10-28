@@ -9,9 +9,9 @@
 #include <iostream>
 #include <string>
 
-#include "allmem_protector.h"
+#include "memory_ranger_console.h"
 #include "resource.h"
-#include "..\shared\allmempro_shared.h" // strings defines
+#include "..\shared\memory_ranger_shared.h" // strings defines
 
 #include <iostream>
 #include "..\..\utils\console_font_colors.h" // add colors for the console
@@ -29,7 +29,7 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[])
 		SetConsoleTitle(MEM_RANGER_NAME);
 		eku::setcolor(eku::bright_white, eku::defbackcol);
 		allocated_mem_protector::MemProtector protector; // activate testbed
-		if (protector.is_ok(ALLMEMPRO_RESOURCE, MEM_RANGER_SYS_FILE, MEM_RANGER_SERVNAME_APP, MEM_RANGER_LINKNAME_APP)) 
+		if (protector.is_ok(MEM_RANGER_SYS_RESOURCE, MEM_RANGER_SYS_FILE, MEM_RANGER_SERVNAME_APP, MEM_RANGER_LINKNAME_APP)) 
 		{
 			allocated_mem_protector::init_input_commands();
 			do {

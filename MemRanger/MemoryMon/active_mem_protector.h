@@ -10,10 +10,10 @@
 #undef _HAS_EXCEPTIONS
 #define _HAS_EXCEPTIONS 0
 #include <vector>
-#include "..\shared\allmempro_shared.h"
-#include "../HyperPlatform/HyperPlatform/util.h"
-#include "../HyperPlatform/HyperPlatform/common.h"
-#include "../HyperPlatform/HyperPlatform/log.h"
+#include "../shared/memory_ranger_shared.h"
+#include "../HyperPlatform/util.h"
+#include "../HyperPlatform/common.h"
+#include "../HyperPlatform/log.h"
 
 class ActiveMemoryProtector {
 

@@ -78,25 +78,13 @@
     <ClCompile Include="InterruptHandlers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="mem_trace.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\HyperPlatform\HyperPlatform\power_callback.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\HyperPlatform\HyperPlatform\hotplug_callback.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\DdiMon\shadow_hook.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\DdiMon\ddi_mon.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="active_mem_protector.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mem_ranger_rules.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="file_system.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -174,21 +162,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\HyperPlatform\HyperPlatform\hotplug_callback.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\DdiMon\shadow_hook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\DdiMon\ddi_mon.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="active_mem_protector.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="mem_ranger_rules.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="file_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

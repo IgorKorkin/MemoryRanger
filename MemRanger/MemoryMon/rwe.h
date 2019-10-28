@@ -5,13 +5,15 @@
 /// @file
 /// Declares interfaces to RWE functions.
 
-#ifndef __RWE_H_
-#define __RWE_H_
+#ifndef MEMORYMON_RWE_H_
+#define MEMORYMON_RWE_H_
+
+#include "../HyperPlatform/ept.h"
 
 #include <fltKernel.h>
-#include "..\..\HyperPlatform\HyperPlatform\ept.h"
-#include "active_mem_protector.h"
-#include "mem_ranger_rules.h"
+
+#include "active_mem_protector.h" // < EPROCESS_PID
+
 
 extern "C" {
 ////////////////////////////////////////////////////////////////////////////////
@@ -25,7 +27,7 @@ extern "C" {
 //
 
 static const auto kRwePoolBigPageTableSizeAddress =
-    reinterpret_cast<void*>(0xfffff80002c66a38);
+    reinterpret_cast<void*>(0xfffff8054462ec28 /*0xfffff80002c66a38*/);
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -47,119 +49,85 @@ using GpRegisters = struct GpRegistersX86;
 // prototypes
 //
 
-void RweConstructTables(_In_ ConstructCallback callback,
-	ULONG table_level, ULONG64 physical_address, bool default_access);
-
-bool is_this_allocation_yours(ISOLATED_MEM_ENCLAVE & driver_enclave, 
-	void * virtual_address);
-
-void RweRefreshTables(ULONG64 physical_address, void* virtual_address);
-
-/*  */
-void set_delta_to_cheat_tsc(ULONG64 delta);
-
-
-/*  */
-void RweAddProtectedDriver(void* drv_base, SIZE_T drv_size);
-
-/*  */
-void RweAddMemoryAccessRule(const MEMORY_ACCESS_RULE & memory_access_rule);
-
-/*  */
-NTSTATUS RweGetMemoryAccessRules(MEMORY_ACCESS_RULE *out_buf, ULONG & out_buf_sz);
-
-/*  */
-bool RweShouldWeProtectItbyRules(const _In_ void* src_address, const _In_ void* dst_address);
-
-/*  */
-bool RweShouldWeAddMemoryAccessRule(const _In_ void* src_address);
-
-/*  */
-bool RweIsInsideIsolatedDrvAddHandleTableEntry(void* driverAddr, void* handleTableEntry);
-
-/*  */
-bool RweIsInsideIsolatedDrvAddFileObj(void* driverAddr, void* fileObj);
-
-bool RweIsInsideIsolatedDrvAddPool(void* driverAddr, void* poolStart, SIZE_T poolSize);
-
 _IRQL_requires_max_(PASSIVE_LEVEL) RweData* RweAllocData();
 
 _IRQL_requires_max_(PASSIVE_LEVEL) void RweFreeData(_In_ RweData* rwe_data);
 
-void RweAddHandleEntryRange(void* address, SIZE_T size);
+//////////////////////////////////////////////////////////////////////////
 
-void RweAddFileObjRange(void* address, SIZE_T size);
+bool ShEnablePageShadowingForNewEnclave(EptData* new_ept);
 
-void RweAddAllocRange(void* address, SIZE_T size);
+EptData* RweAllocateNewEnclave();
 
-void RweAddSystemDrvRange(_In_ void* address, _In_ SIZE_T size);
+EptData* RweAddIsolatedEnclave(_In_ void* address, _In_ SIZE_T size);
 
-void RweAddEprocess(const EPROCESS_PID & proc);
+typedef EptCommonEntry*(TConstructCallback)(
+  EptCommonEntry *table, ULONG table_level, ULONG64 physical_address,
+  EptData *ept_data, bool default_access);
 
-bool RweDelEprocess(const HANDLE ProcessId);
 
-void RweAddSystemStructsRange(_In_ void* address, _In_ SIZE_T size);
 
-void RweDelSystemStructsRange(_In_ void* address, _In_ SIZE_T size);
-
-void RweAddIsolatedEnclave(_In_ void* address, _In_ SIZE_T size);
+void RweConstructTablesForEnclaves(_In_ TConstructCallback callback,
+  ULONG table_level, ULONG64 physical_address, bool default_access);
 
 void RweAddSrcRange(_In_ void* address, _In_ SIZE_T size);
 
 void RweAddDstRange(_In_ void* address, _In_ SIZE_T size);
 
-/**/
-bool RweIsInsideHandleTableRangePageAlign(void* address);
+void RweAddOneOSInternalDriverRange(void* address, SIZE_T size);
 
-/**/
-bool RweIsInsideHandleTableRange(void* address);
+void RweAddOneOSInternalDataRange(void* address, SIZE_T size);
 
+void RweAddEprocess(const EPROCESS_PID & proc);
 
-/**/
-bool RweIsInsideFileObjectsRange(void* address);
+void RweAddFileObjRange(void* address, SIZE_T size);
 
-/**/
-bool RweIsInsideFileObjectsRangePageAlign(void* address);
+void RweAddHandleEntryRange(void* address, SIZE_T size);
 
-/* check if 'address' belongs to the pages with the protected region */
-bool RweIsInsideMemoryAllocationRangePageAlign(void* address);
+bool RweAddHandleTableEntryForNewlyLoadedDriver(void* driverAddr, void* handleTableEntry);
 
-/* Precisely check if 'address' belongs to the protected region */
-bool RweIsInsideMemoryAllocationRange(_In_ void* address);
+//////////////////////////////////////////////////////////////////////////
+void RweDelOneOSInternalDataRange(void* address, SIZE_T size);
 
-/**/
-bool RweDelAllocationRange(void* driverAddress, void* allocAddr);
+bool RweDelEprocess(const HANDLE ProcessId);
 
-/**/
-bool RweDelHandleTableEntry(void* driverAddress, void* handleEntry);
-
-/**/
 bool RweDelFileObject(void* driverAddress, void* fileobjAddr);
 
+bool RweDelHandleTableEntry(void* driverAddress, void* handleEntry);
 
-/* Protected drivers range by MemoryRanger using page align*/
-bool RweIsInsideIsolatedDriversRangePageAlign(_In_ void* address);
-
-/* Protected drivers range by MemoryRanger */
-bool RweIsInsideIsolatedDriversRange(_In_ void* address);
-
-/*  */
-bool RweIsInsideSystemStructsRangePageAlign(_In_ void* address);
-
-/*  */
-bool RweIsInsideSystemStructsRange(_In_ void* address);
-
-bool RweIsInsideSystemDriversRange(_In_ void* address);
-
+//////////////////////////////////////////////////////////////////////////
 bool RweIsInsideSrcRange(_In_ void* address);
 
 bool RweIsInsideDstRange(_In_ void* address);
+
+bool RweIsInsideOSInternalDriversRange(void* address);
+
+/* Protected drivers range by MemoryRanger */
+bool RweIsInsideNewlyLoadedDriversRange(_In_ void* address);
+
+bool RweIsInsideNewlyLoadedDriversRangePageAlign(void* address);
+
+bool RweIsInsideOSInternalDataRange(void* address);
+
+bool RweIsInsideOSInternalDataRangePageAlign(void* address);
+
+bool RweIsInsideFileObjectsRange(void* address);
+
+bool RweIsInsideFileObjectsRangePageAlign(void* address);
+
+bool RweIsInsideHandleTableRange(void* address);
+
+bool RweIsInsideHandleTableRangePageAlign(void* address);
+
+void RweRefreshTables(ProcessorData* processor_data, ULONG64 physical_address, void* virtual_address);
+
+//////////////////////////////////////////////////////////////////////////
 
 _IRQL_requires_max_(PASSIVE_LEVEL) void RweSetDefaultEptAttributes(
     _Inout_ ProcessorData* processor_data);
 
 _IRQL_requires_max_(PASSIVE_LEVEL) void RweSetDefaultEptAttributesForEpt(
-	_Inout_ EptData *ept_data);
+  _Inout_ EptData *ept_data);
 
 _IRQL_requires_max_(PASSIVE_LEVEL) void RweApplyRanges();
 
@@ -194,4 +162,4 @@ extern void* g_rwe_zero_page;
 
 }  // extern "C"
 
-#endif // __RWE_H_
+#endif  // MEMORYMON_RWE_H_

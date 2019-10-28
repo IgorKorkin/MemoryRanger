@@ -55,8 +55,10 @@ extern "C" {
 		PEPROCESS pProcess = NULL;
 		const HANDLE system_pid = (HANDLE)4;
 		if (NT_SUCCESS(PsLookupProcessByProcessId(system_pid, &pProcess))) {
+      
 			PHANDLE_TABLE pTable =
-				*(PHANDLE_TABLE*)((PUCHAR)pProcess + 0x418 /*dynData.ObjTable*/);
+				*(PHANDLE_TABLE*)((PUCHAR)pProcess + g_EprocOffsets.ObjectTable );
+      // - https://github.com/DarthTon/Blackbone/tree/master/src/BlackBoneDrv
 			
 			GetHandleTableEntry get_entry = { 0 };
 			get_entry.Handle = ObKernelHandleToHandle(fileHandle);

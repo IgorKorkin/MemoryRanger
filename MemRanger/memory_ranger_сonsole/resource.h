@@ -5,7 +5,7 @@
 // Next default values for new objects
 // 
 
-#define    ALLMEMPRO_RESOURCE    10102
+#define    MEM_RANGER_SYS_RESOURCE    10102
 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS

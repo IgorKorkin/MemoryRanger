@@ -6,9 +6,9 @@
 /// Implements test utility functions.
 
 #include "test_util.h"
-#include "../HyperPlatform/HyperPlatform/common.h"
-#include "../HyperPlatform/HyperPlatform/log.h"
-#include "../HyperPlatform/HyperPlatform/util.h"
+#include "../HyperPlatform/common.h"
+#include "../HyperPlatform/log.h"
+#include "../HyperPlatform/util.h"
 
 extern "C" {
 ////////////////////////////////////////////////////////////////////////////////

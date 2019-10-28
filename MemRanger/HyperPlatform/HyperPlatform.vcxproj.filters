@@ -1,0 +1,227 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Driver Files">
+      <UniqueIdentifier>{8E41214B-6785-4CFE-B992-037D68949A14}</UniqueIdentifier>
+      <Extensions>inf;inv;inx;mof;mc;</Extensions>
+    </Filter>
+    <Filter Include="Source Files\MemoryMon">
+      <UniqueIdentifier>{8600e7b0-eb99-41a9-ad18-9324e753d595}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\HyperPlatform">
+      <UniqueIdentifier>{bc6883a2-3bc7-421f-9fb3-87a64e8f4ffe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\MemoryMon">
+      <UniqueIdentifier>{83d02d1a-bcee-4610-920c-96f0b2b833c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\HyperPlatform">
+      <UniqueIdentifier>{a49db3ed-662a-4d9e-b346-ac9033a7914f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\DdiMon">
+      <UniqueIdentifier>{4406ee62-7153-4afc-a3e2-155f06fcbc02}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\DdiMon">
+      <UniqueIdentifier>{a25fb361-e6f8-4dc3-88ea-acb534cad032}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Inf Include="HyperPlatform.inf">
+      <Filter>Driver Files</Filter>
+    </Inf>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\MemoryMon\AddressRanges.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+    <ClCompile Include="driver.cpp">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </ClCompile>
+    <ClCompile Include="global_object.cpp">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MemoryMon\V2PMap.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+    <ClCompile Include="vm.cpp">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </ClCompile>
+    <ClCompile Include="vmm.cpp">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </ClCompile>
+    <ClCompile Include="power_callback.cpp">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </ClCompile>
+    <ClCompile Include="performance.cpp">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </ClCompile>
+    <ClCompile Include="log.cpp">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel_stl.cpp">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </ClCompile>
+    <ClCompile Include="hotplug_callback.cpp">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MemoryMon\InterruptHandlers.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MemoryMon\mem_trace.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MemoryMon\page_fault.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MemoryMon\PageFaultRecord.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MemoryMon\rwe.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MemoryMon\test.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MemoryMon\test_util.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+    <ClCompile Include="util.cpp">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MemoryMon\ScopedLock.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+    <ClCompile Include="ept.cpp">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DdiMon\shadow_hook.cpp">
+      <Filter>Source Files\DdiMon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DdiMon\ddi_mon.cpp">
+      <Filter>Source Files\DdiMon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MemoryMon\mem_ranger_rules.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MemoryMon\file_system.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MemoryMon\active_mem_protector.cpp">
+      <Filter>Source Files\MemoryMon</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\MemoryMon\AddressRanges.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MemoryMon\InterruptHandlers.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MemoryMon\mem_trace.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MemoryMon\page_fault.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MemoryMon\PageFaultRecord.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MemoryMon\rwe.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MemoryMon\ScopedLock.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MemoryMon\test.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MemoryMon\test_util.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MemoryMon\V2PMap.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+    <ClInclude Include="asm.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="common.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="driver.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="ept.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="global_object.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="hotplug_callback.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="ia32_type.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="log.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="perf_counter.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="performance.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="power_callback.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="util.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="util_page_constants.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="vm.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="vmm.h">
+      <Filter>Header Files\HyperPlatform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DdiMon\shadow_hook.h">
+      <Filter>Header Files\DdiMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DdiMon\ddi_mon.h">
+      <Filter>Header Files\DdiMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MemoryMon\mem_ranger_rules.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MemoryMon\file_system.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MemoryMon\active_mem_protector.h">
+      <Filter>Header Files\MemoryMon</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="Arch\x86\x86.asm">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </MASM>
+    <MASM Include="Arch\x64\x64.asm">
+      <Filter>Source Files\HyperPlatform</Filter>
+    </MASM>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="HyperPlatform.ruleset" />
+  </ItemGroup>
+</Project>

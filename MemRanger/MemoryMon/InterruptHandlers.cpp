@@ -6,7 +6,8 @@
 /// Implements the InterruptHandlers class.
 
 #include "InterruptHandlers.h"
-#include "../../HyperPlatform/HyperPlatform/ia32_type.h"
+#include "../HyperPlatform/ia32_type.h"
+#include <intrin.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 //

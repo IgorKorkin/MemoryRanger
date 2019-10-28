@@ -18,17 +18,14 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <ItemGroup>
-    <Inf Include="MemoryMon.inf" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{08370D15-D882-423D-834D-78DC5B1E607E}</ProjectGuid>
+    <ProjectGuid>{4C048BB2-7E8D-43BF-B29D-942461275023}</ProjectGuid>
     <TemplateGuid>{497e31cb-056b-4f31-abb8-447fd55ee5a5}</TemplateGuid>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
     <Configuration>Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">Win32</Platform>
-    <RootNamespace>MemoryMon</RootNamespace>
+    <RootNamespace>HyperPlatform</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -37,7 +34,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
     <ConfigurationType>Driver</ConfigurationType>
-    <DriverType>KMDF</DriverType>
+    <DriverType>WDM</DriverType>
     <DriverTargetPlatform>Desktop</DriverTargetPlatform>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -45,7 +42,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
     <ConfigurationType>Driver</ConfigurationType>
-    <DriverType>KMDF</DriverType>
+    <DriverType>WDM</DriverType>
     <DriverTargetPlatform>Desktop</DriverTargetPlatform>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -53,39 +50,44 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
     <ConfigurationType>Driver</ConfigurationType>
-    <DriverType>KMDF</DriverType>
     <DriverTargetPlatform>Desktop</DriverTargetPlatform>
+    <DriverType>KMDF</DriverType>
+    <_NT_TARGET_VERSION>0x0601</_NT_TARGET_VERSION>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <TargetVersion>Windows7</TargetVersion>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
     <ConfigurationType>Driver</ConfigurationType>
-    <DriverType>KMDF</DriverType>
     <DriverTargetPlatform>Desktop</DriverTargetPlatform>
+    <DriverType>KMDF</DriverType>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionSettings" />
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <IncludePath>$(VC_IncludePath);$(IncludePath)</IncludePath>
+    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
+    <CodeAnalysisRuleSet>HyperPlatform.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <IncludePath>$(VC_IncludePath);$(IncludePath)</IncludePath>
+    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
+    <CodeAnalysisRuleSet>HyperPlatform.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
+    <CodeAnalysisRuleSet>HyperPlatform.ruleset</CodeAnalysisRuleSet>
     <IncludePath>$(VC_IncludePath);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
+    <CodeAnalysisRuleSet>HyperPlatform.ruleset</CodeAnalysisRuleSet>
     <IncludePath>$(VC_IncludePath);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -93,117 +95,151 @@
       <WppRecorderEnabled>true</WppRecorderEnabled>
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)capstone\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>MEMORYMON_ENABLE_MMIO_TRACE_NOT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DisableSpecificWarnings>5040;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
-    <Link>
-      <AdditionalDependencies>$(OutDir)capstone_static_winkernel.lib;ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
+    <Link />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WppRecorderEnabled>true</WppRecorderEnabled>
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)capstone\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>MEMORYMON_ENABLE_MMIO_TRACE_NOT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DisableSpecificWarnings>5040;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
-    <Link>
-      <AdditionalDependencies>$(OutDir)capstone_static_winkernel.lib;ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
+    <Link />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WppRecorderEnabled>true</WppRecorderEnabled>
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)capstone\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <ConformanceMode>true</ConformanceMode>
+      <DisableSpecificWarnings>5040;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir)capstone\include;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>MEMORYMON_ENABLE_MMIO_TRACE_NOT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <CompileAs>
+      </CompileAs>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(OutDir)capstone_static_winkernel.lib;ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OutDir)capstone_static_winkernel.lib;ntstrsafe.lib;%(AdditionalDependencies);$(KernelBufferOverflowLib);$(DDK_LIB_PATH)ntoskrnl.lib;$(DDK_LIB_PATH)hal.lib;$(DDK_LIB_PATH)wmilib.lib</AdditionalDependencies>
+      <EntryPointSymbol>GsDriverEntry</EntryPointSymbol>
+      <AdditionalOptions>/INTEGRITYCHECK %(AdditionalOptions)</AdditionalOptions>
     </Link>
+    <Inf>
+      <KmdfVersionNumber />
+    </Inf>
+    <MASM>
+      <ListAllAvailableInformation>true</ListAllAvailableInformation>
+    </MASM>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WppRecorderEnabled>true</WppRecorderEnabled>
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)capstone\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ConformanceMode>true</ConformanceMode>
+      <DisableSpecificWarnings>5040;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir)capstone\include;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>MEMORYMON_ENABLE_MMIO_TRACE_NOT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(OutDir)capstone_static_winkernel.lib;ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OutDir)capstone_static_winkernel.lib;ntstrsafe.lib;%(AdditionalDependencies);$(KernelBufferOverflowLib);$(DDK_LIB_PATH)ntoskrnl.lib;$(DDK_LIB_PATH)hal.lib;$(DDK_LIB_PATH)wmilib.lib</AdditionalDependencies>
+      <AdditionalOptions>/INTEGRITYCHECK %(AdditionalOptions)</AdditionalOptions>
     </Link>
+    <Inf>
+      <KmdfVersionNumber />
+    </Inf>
   </ItemDefinitionGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\HyperPlatform\HyperPlatform\driver.cpp" />
-    <ClCompile Include="..\HyperPlatform\HyperPlatform\ept.cpp" />
-    <ClCompile Include="..\HyperPlatform\HyperPlatform\global_object.cpp" />
-    <ClCompile Include="..\HyperPlatform\HyperPlatform\hotplug_callback.cpp" />
-    <ClCompile Include="..\HyperPlatform\HyperPlatform\kernel_stl.cpp" />
-    <ClCompile Include="..\HyperPlatform\HyperPlatform\log.cpp" />
-    <ClCompile Include="..\HyperPlatform\HyperPlatform\performance.cpp" />
-    <ClCompile Include="..\HyperPlatform\HyperPlatform\power_callback.cpp" />
-    <ClCompile Include="..\HyperPlatform\HyperPlatform\util.cpp" />
-    <ClCompile Include="..\HyperPlatform\HyperPlatform\vm.cpp" />
-    <ClCompile Include="..\HyperPlatform\HyperPlatform\vmm.cpp" />
-    <ClCompile Include="AddressRanges.cpp" />
-    <ClCompile Include="InterruptHandlers.cpp" />
-    <ClCompile Include="mem_trace.cpp" />
-    <ClCompile Include="page_fault.cpp" />
-    <ClCompile Include="PageFaultRecord.cpp" />
-    <ClCompile Include="rwe.cpp" />
-    <ClCompile Include="ScopedLock.cpp" />
-    <ClCompile Include="test.cpp" />
-    <ClCompile Include="test_util.cpp" />
-    <ClCompile Include="V2PMap.cpp" />
+    <ClCompile Include="..\DdiMon\ddi_mon.cpp" />
+    <ClCompile Include="..\DdiMon\shadow_hook.cpp" />
+    <ClCompile Include="..\MemoryMon\active_mem_protector.cpp" />
+    <ClCompile Include="..\MemoryMon\AddressRanges.cpp" />
+    <ClCompile Include="..\MemoryMon\file_system.cpp" />
+    <ClCompile Include="..\MemoryMon\InterruptHandlers.cpp" />
+    <ClCompile Include="..\MemoryMon\mem_ranger_rules.cpp" />
+    <ClCompile Include="..\MemoryMon\mem_trace.cpp" />
+    <ClCompile Include="..\MemoryMon\PageFaultRecord.cpp" />
+    <ClCompile Include="..\MemoryMon\page_fault.cpp" />
+    <ClCompile Include="..\MemoryMon\rwe.cpp" />
+    <ClCompile Include="..\MemoryMon\ScopedLock.cpp" />
+    <ClCompile Include="..\MemoryMon\test.cpp" />
+    <ClCompile Include="..\MemoryMon\test_util.cpp" />
+    <ClCompile Include="..\MemoryMon\V2PMap.cpp" />
+    <ClCompile Include="driver.cpp" />
+    <ClCompile Include="ept.cpp" />
+    <ClCompile Include="global_object.cpp" />
+    <ClCompile Include="hotplug_callback.cpp" />
+    <ClCompile Include="kernel_stl.cpp" />
+    <ClCompile Include="log.cpp" />
+    <ClCompile Include="performance.cpp" />
+    <ClCompile Include="power_callback.cpp" />
+    <ClCompile Include="util.cpp" />
+    <ClCompile Include="vm.cpp" />
+    <ClCompile Include="vmm.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\asm.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\common.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\driver.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\ept.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\global_object.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\hotplug_callback.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\ia32_type.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\log.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\performance.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\perf_counter.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\power_callback.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\util.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\util_page_constants.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\vm.h" />
-    <ClInclude Include="..\HyperPlatform\HyperPlatform\vmm.h" />
-    <ClInclude Include="AddressRanges.h" />
-    <ClInclude Include="InterruptHandlers.h" />
-    <ClInclude Include="mem_trace.h" />
-    <ClInclude Include="page_fault.h" />
-    <ClInclude Include="PageFaultRecord.h" />
-    <ClInclude Include="rwe.h" />
-    <ClInclude Include="ScopedLock.h" />
-    <ClInclude Include="test.h" />
-    <ClInclude Include="test_util.h" />
-    <ClInclude Include="V2PMap.h" />
+    <ClInclude Include="..\DdiMon\ddi_mon.h" />
+    <ClInclude Include="..\DdiMon\shadow_hook.h" />
+    <ClInclude Include="..\MemoryMon\active_mem_protector.h" />
+    <ClInclude Include="..\MemoryMon\AddressRanges.h" />
+    <ClInclude Include="..\MemoryMon\file_system.h" />
+    <ClInclude Include="..\MemoryMon\InterruptHandlers.h" />
+    <ClInclude Include="..\MemoryMon\mem_ranger_rules.h" />
+    <ClInclude Include="..\MemoryMon\mem_trace.h" />
+    <ClInclude Include="..\MemoryMon\PageFaultRecord.h" />
+    <ClInclude Include="..\MemoryMon\page_fault.h" />
+    <ClInclude Include="..\MemoryMon\rwe.h" />
+    <ClInclude Include="..\MemoryMon\ScopedLock.h" />
+    <ClInclude Include="..\MemoryMon\test.h" />
+    <ClInclude Include="..\MemoryMon\test_util.h" />
+    <ClInclude Include="..\MemoryMon\V2PMap.h" />
+    <ClInclude Include="asm.h" />
+    <ClInclude Include="common.h" />
+    <ClInclude Include="driver.h" />
+    <ClInclude Include="ept.h" />
+    <ClInclude Include="global_object.h" />
+    <ClInclude Include="hotplug_callback.h" />
+    <ClInclude Include="ia32_type.h" />
+    <ClInclude Include="log.h" />
+    <ClInclude Include="performance.h" />
+    <ClInclude Include="perf_counter.h" />
+    <ClInclude Include="power_callback.h" />
+    <ClInclude Include="util.h" />
+    <ClInclude Include="util_page_constants.h" />
+    <ClInclude Include="vm.h" />
+    <ClInclude Include="vmm.h" />
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="..\HyperPlatform\HyperPlatform\Arch\x64\x64.asm">
+    <MASM Include="Arch\x64\x64.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <FileType>Document</FileType>
     </MASM>
-    <MASM Include="..\HyperPlatform\HyperPlatform\Arch\x86\x86.asm">
+    <MASM Include="Arch\x86\x86.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <UseSafeExceptionHandlers Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</UseSafeExceptionHandlers>
       <UseSafeExceptionHandlers Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</UseSafeExceptionHandlers>
-      <UseSafeExceptionHandlers Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</UseSafeExceptionHandlers>
-      <UseSafeExceptionHandlers Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</UseSafeExceptionHandlers>
     </MASM>
   </ItemGroup>
+  <ItemGroup>
+    <Inf Include="HyperPlatform.inf" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="HyperPlatform.ruleset" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

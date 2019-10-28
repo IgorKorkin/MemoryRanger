@@ -6,8 +6,8 @@
 /// Implements page-fault functions.
 
 #include "page_fault.h"
-#include "../HyperPlatform/HyperPlatform/common.h"
-#include "../HyperPlatform/HyperPlatform/util.h"
+#include "../HyperPlatform/common.h"
+#include "../HyperPlatform/util.h"
 #include "PageFaultRecord.h"
 
 #pragma section(".asm", read, execute)
