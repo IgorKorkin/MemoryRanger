@@ -1,3 +1,9 @@
+<i><b>
+```diff
+@@ All the updates will be soon @@
+```
+</b></i>
+
 ## Updated MemoryRanger: Hijacking Is Not An Option 
 Updated MemoryRanger prevents the following new attacks:
 * <b>Hijacking of NTFS structures</b> gains an unauthorized access to files opened without shared access by patching Stream Control Block structures; 
