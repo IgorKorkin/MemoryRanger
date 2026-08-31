@@ -4,6 +4,10 @@
 ```
 </b></i>
 
+## MemoryRanger 2030
+
+Future research and next-generation MemoryRanger design notes are maintained in the private [MR2030](https://github.com/IgorKorkin/MR2030) repository.
+
 ## Updated MemoryRanger: Hijacking Is Not An Option 
 Updated MemoryRanger prevents the following new attacks:
 * <b>Hijacking of NTFS structures</b> gains an unauthorized access to files opened without shared access by patching Stream Control Block structures; 
